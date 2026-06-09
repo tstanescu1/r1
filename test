@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<body style="width: 240px; height: 282px; display: flex; align-items: center; justify-content: center; font-family: sans-serif;">
+    <h1>Hello, World!</h1>
+    <script>
+        // Example: Sending a message to the R1 system
+        function notifyRabbit(msg) {
+            if (window.PluginMessageHandler) {
+                PluginMessageHandler.postMessage(msg);
+            }
+        }
+    </script>
+</body>
+</html>
