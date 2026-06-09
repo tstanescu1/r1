@@ -1,109 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=240, height=282, initial-scale=1.0">
     <style>
-        /* Base Layout & Fix for Border Clipping */
-        body, html {
-            margin: 0; padding: 0; width: 240px; height: 282px;
-            background: #000; color: #fff; font-family: sans-serif;
-            overflow: hidden; box-sizing: border-box;
-        }
-        #app {
-            width: 240px; height: 282px;
-            border: 5px solid #FE5000;
-            box-sizing: border-box; /* Fixes border overlap issue */
-            position: relative; padding: 10px;
-        }
-
-        /* Navigation */
-        #menu { display: none; position: absolute; top: 0; right: 0; background: #333; padding: 10px; z-index: 10; }
-        .page { display: none; }
-        .active { display: block; }
-        button { cursor: pointer; display: block; width: 100%; margin: 5px 0; }
+        body, html { width: 240px; height: 282px; margin: 0; background: #000; color: #fff; overflow: hidden; }
+        #app { width: 240px; height: 282px; border: 5px solid #FE5000; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
-
 <div id="app">
-    <button onclick="toggleMenu()" style="width: 30px; height: 30px; position: absolute; top: 0; right: 0;">≡</button>
-    <div id="menu">
-        <button onclick="showPage('hardware')">Hardware</button>
-        <button onclick="showPage('data')">Data</button>
-        <button onclick="showPage('speak')">Speak</button>
-    </div>
-
-    <!-- Hardware Page -->
-    <div id="hardware" class="page active">
-        <h3>Hardware</h3>
-        <p id="h-status">Waiting for input...</p>
-        <div id="led" style="width: 20px; height: 20px; background: grey; border-radius: 50%;"></div>
-    </div>
-
-    <!-- Data Page -->
-    <div id="data" class="page">
-        <h3>Data</h3>
-        <button onclick="requestCatFact()">Cat Fact</button>
-        <button onclick="requestColor()">Paint Red</button>
-        <p id="d-output"></p>
-    </div>
-
-    <!-- Speak Page -->
-    <div id="speak" class="page">
-        <h3>Speak</h3>
-        <button onclick="speakTest()">Say Hello</button>
-    </div>
+    <h3 id="status">Ready</h3>
+    <button onclick="speakTest()">Test Voice</button>
 </div>
 
 <script>
-    // 1. SDK Event Handling (The Bridge)
-    window.onPluginMessage = function(data) {
-        console.log("SDK Message Received:", data);
-        if (data.data) {
-            const parsed = JSON.parse(data.data);
-            if (parsed.paint) {
-                document.getElementById('app').style.borderColor = parsed.paint;
-            }
-            if (parsed.facts) {
-                document.getElementById('d-output').innerText = parsed.facts[0];
-            }
+    // --- BUTTON LOGIC (Manual Debounce) ---
+    let clickCount = 0;
+    let pressTimer = null;
+    let startTime = 0;
+
+    // Use 'mousedown'/'mouseup' to track hardware button state
+    // Note: If 'sideClick' isn't firing, attach these to 'window'
+    window.addEventListener('mousedown', () => {
+        startTime = Date.now();
+        pressTimer = setTimeout(() => {
+            handleLongPress();
+        }, 800); // 800ms hold = Long Press
+    });
+
+    window.addEventListener('mouseup', () => {
+        clearTimeout(pressTimer);
+        let duration = Date.now() - startTime;
+
+        if (duration < 500) { // It's a click
+            clickCount++;
+            setTimeout(() => {
+                if (clickCount === 1) handleSingleClick();
+                else if (clickCount === 2) handleDoubleClick();
+                clickCount = 0;
+            }, 300); // Wait 300ms to see if another click comes
         }
+    });
+
+    function handleSingleClick() {
+        document.getElementById('status').innerText = "Single Click!";
+        document.getElementById('app').style.borderColor = "blue";
+    }
+
+    function handleDoubleClick() {
+        document.getElementById('status').innerText = "Double Click!";
+        document.getElementById('app').style.borderColor = "red";
+    }
+
+    function handleLongPress() {
+        document.getElementById('status').innerText = "Long Press!";
+        document.getElementById('app').style.borderColor = "green";
+    }
+
+    // --- AUDIO FIX ---
+    function speakTest() {
+        document.getElementById('status').innerText = "Speaking...";
+        PluginMessageHandler.postMessage(JSON.stringify({
+            message: "Hello! If you can hear this, the audio bridge is working.",
+            useLLM: true,
+            wantsR1Response: true 
+        }));
+    }
+
+    // Listen for bridge messages
+    window.onPluginMessage = function(data) {
+        console.log("Bridge Received:", data);
+        // Sometimes the SDK needs a specific acknowledgement
     };
-
-    // 2. Hardware Event Listeners
-    window.addEventListener('scrollUp', () => blinkLED('green'));
-    window.addEventListener('scrollDown', () => blinkLED('blue'));
-    window.addEventListener('sideClick', () => blinkLED('red'));
-
-    function blinkLED(color) {
-        const led = document.getElementById('led');
-        led.style.background = color;
-        setTimeout(() => led.style.background = 'grey', 500);
-    }
-
-    // 3. App Navigation
-    function toggleMenu() { document.getElementById('menu').style.display = document.getElementById('menu').style.display === 'block' ? 'none' : 'block'; }
-    function showPage(id) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        document.getElementById('menu').style.display = 'none';
-    }
-
-    // 4. API Requests
-    function requestCatFact() {
-        PluginMessageHandler.postMessage(JSON.stringify({
-            message: 'Tell me 1 fact about cats. Return JSON: {"facts":["fact"]}',
-            useLLM: true
-        }));
-    }
-
-    function requestColor() {
-        PluginMessageHandler.postMessage(JSON.stringify({
-            message: 'Return hex code for red. JSON: {"paint":"#ff0000"}',
-            useLLM: true
-        }));
-    }
 </script>
 </body>
 </html>
