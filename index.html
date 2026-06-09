@@ -4,38 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=240, height=282, initial-scale=1.0">
     <style>
-        body, html { width: 240px; height: 282px; margin: 0; padding: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; box-sizing: border-box; }
+        body, html { width: 240px; height: 282px; margin: 0; padding: 0; background: #000; color: #fff; overflow: hidden; box-sizing: border-box; }
         #app { width: 240px; height: 282px; border: 5px solid #FE5000; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #status { font-size: 12px; margin-bottom: 10px; text-align: center; color: #aaa; }
-        button { width: 140px; height: 40px; margin: 5px; cursor: pointer; z-index: 10; font-size: 14px; }
+        button { width: 140px; height: 40px; font-size: 14px; cursor: pointer; }
     </style>
 </head>
 <body>
     <div id="app">
         <h3 id="status">System Ready</h3>
-        <button id="voiceBtn" onclick="safeSpeak()">Say Hello</button>
+        <button id="voiceBtn" onclick="fastSpeak()">Say Hello (Fast)</button>
     </div>
 
 <script>
-    // --- 1. ERROR-PROOF WRAPPERS ---
-    // If one handler crashes, the whole script stops. Try-Catch prevents this.
-    function runSafe(fn, ...args) {
-        try { fn(...args); } catch (e) { console.error("Event Handler Error:", e); }
-    }
-
-    // --- 2. SDK EVENT LISTENERS ---
-    window.addEventListener('scrollUp', () => runSafe(handleScrollUp));
-    window.addEventListener('scrollDown', () => runSafe(handleScrollDown));
-    window.addEventListener('sideClick', () => runSafe(handleSideClickEvent));
-    window.addEventListener('longPressStart', () => runSafe(handleLongPressStart));
-    window.addEventListener('longPressEnd', () => runSafe(handleLongPressEnd));
-
-    // --- 3. HARDWARE LOGIC ---
+    // --- 1. FAST TOUCH INPUTS ---
     let lastClickTime = 0;
-    const DOUBLE_CLICK_THRESHOLD = 300;
+    const DOUBLE_CLICK_THRESHOLD = 200; // Tighter window for speed
     let clickTimer = null;
 
-    function handleSideClickEvent() {
+    // Use touch events for instant response
+    window.addEventListener('touchstart', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+    });
+
+    window.addEventListener('touchend', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
         const now = Date.now();
         if (now - lastClickTime < DOUBLE_CLICK_THRESHOLD) {
             clearTimeout(clickTimer);
@@ -45,9 +37,34 @@
             lastClickTime = now;
             clickTimer = setTimeout(() => handleSingleClick(), DOUBLE_CLICK_THRESHOLD);
         }
-        // Force focus back to window after interaction
-        window.focus(); 
+    });
+
+    // --- 2. LOCAL TTS (INSTANT AUDIO) ---
+    function fastSpeak() {
+        document.getElementById('status').innerText = "Speaking (Local)...";
+        
+        // Try local Browser TTS first (Instant)
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance("Hello! This is instant.");
+            window.speechSynthesis.speak(utterance);
+        } else {
+            // Fallback to Bridge if local TTS fails
+            PluginMessageHandler.postMessage(JSON.stringify({
+                message: "Hello",
+                useLLM: true,
+                wantsR1Response: true 
+            }));
+        }
+        setTimeout(() => window.focus(), 100);
     }
+
+    // --- 3. HARDWARE EVENT MAPPING ---
+    window.addEventListener('scrollUp', () => { 
+        document.getElementById('app').style.borderColor = "yellow";
+        setTimeout(() => document.getElementById('app').style.borderColor = "#FE5000", 200);
+    });
+
+    // ... (Keep your existing handleSingleClick, handleDoubleClick functions here) ...
 
     function handleSingleClick() {
         document.getElementById('status').innerText = "Single Click!";
@@ -57,43 +74,6 @@
     function handleDoubleClick() {
         document.getElementById('status').innerText = "Double Click!";
         document.getElementById('app').style.borderColor = "red";
-    }
-
-    function handleScrollUp() {
-        document.getElementById('status').innerText = "Scroll: DOWN"; // Inverted to match your preference
-        document.getElementById('app').style.borderColor = "yellow";
-    }
-
-    function handleScrollDown() {
-        document.getElementById('status').innerText = "Scroll: UP";
-        document.getElementById('app').style.borderColor = "green";
-    }
-
-    function handleLongPressStart() {
-        document.getElementById('status').innerText = "Holding...";
-    }
-
-    function handleLongPressEnd() {
-        document.getElementById('status').innerText = "Released";
-        document.getElementById('app').style.borderColor = "#FE5000";
-    }
-
-    // --- 4. AUDIO BRIDGE WITH FOCUS RECOVERY ---
-    function safeSpeak() {
-        document.getElementById('status').innerText = "Talking...";
-        if(window.PluginMessageHandler) {
-            try {
-                PluginMessageHandler.postMessage(JSON.stringify({
-                    message: "Bridge is active.",
-                    useLLM: true,
-                    wantsR1Response: true 
-                }));
-            } catch(e) {
-                document.getElementById('status').innerText = "Bridge Error";
-            }
-        }
-        // IMPORTANT: Force focus back so the hardware listeners don't "sleep"
-        setTimeout(() => window.focus(), 100);
     }
 </script>
 </body>
