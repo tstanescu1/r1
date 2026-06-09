@@ -1,876 +1,545 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=240, height=292, initial-scale=1.0">
-    <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body, html {
-            width: 240px; height: 292px;
-            background: #0a0a0a; color: #fff;
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            overflow: hidden;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=240, height=292, initial-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body,html{width:240px;height:292px;background:#0d0d1a;color:#fff;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none}
+#shell{width:240px;height:292px;position:relative;overflow:hidden}
+.screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column}
+.screen.active{display:flex}
+::-webkit-scrollbar{display:none}
+*{scrollbar-width:none;-ms-overflow-style:none}
 
-        /* ── Shell ── */
-        #shell {
-            width: 240px; height: 292px;
-            display: flex; flex-direction: column;
-            position: relative;
-        }
+/* Topbar */
+.topbar{height:24px;min-height:24px;display:flex;align-items:center;padding:0 4px;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:10}
+.bk{width:28px;height:20px;background:rgba(255,255,255,.1);border:none;border-radius:4px;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.bk:active{background:rgba(255,80,0,.4)}
+.ttl{flex:1;text-align:center;font-size:10px;font-weight:600;color:#ddd;letter-spacing:.3px}
+.spacer{width:28px}
 
-        /* ── Status bar ── */
-        #statusBar {
-            height: 20px; min-height: 20px;
-            display: flex; align-items: center;
-            justify-content: space-between;
-            padding: 0 8px;
-            background: #111; font-size: 9px; color: #666;
-            border-bottom: 1px solid #222;
-        }
-        #statusBar .clock { color: #999; }
-        #statusBar .indicator { display: flex; gap: 4px; align-items: center; }
-        #statusBar .dot { width: 5px; height: 5px; border-radius: 50%; }
-        #statusBar .dot.on { background: #4CAF50; }
-        #statusBar .dot.off { background: #555; }
+/* ═══ LAUNCHER ═══ */
+#launcherScreen{background:linear-gradient(180deg,#0d0d1a,#111)}
+.lhdr{display:flex;align-items:center;justify-content:center;padding:8px 10px 4px;position:relative}
+.lhdr .bunny{font-size:22px}
+.lhdr .name{font-size:12px;font-weight:700;color:#FE5000;margin-left:6px;letter-spacing:.8px}
+.exit-btn{position:absolute;right:10px;top:8px;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#666;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.exit-btn:active{background:rgba(255,80,0,.3);border-color:#FE5000;color:#FE5000}
+.agrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:3px 8px;flex:1;align-content:start}
+.atile{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;padding:6px 2px 4px;cursor:pointer;transition:transform .1s;-webkit-tap-highlight-color:transparent;border:2px solid transparent}
+.atile:active{transform:scale(.92);border-color:rgba(255,255,255,.3)}
+.ti{font-size:22px;margin-bottom:1px}
+.tn{font-size:8px;font-weight:600;color:#fff;text-align:center;line-height:1.2;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.lhint{text-align:center;padding:2px 0 4px;font-size:7px;color:#444}
 
-        /* ── Content area ── */
-        #content {
-            flex: 1; overflow: hidden;
-            position: relative;
-        }
+/* ═══ CONFIRM DIALOG ═══ */
+.confirm-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:2000;text-align:center;padding:20px}
+.confirm-overlay.show{display:flex}
+.conf-icon{font-size:32px;margin-bottom:6px}
+.conf-msg{font-size:12px;color:#ccc;margin-bottom:14px;line-height:1.4}
+.conf-btns{display:flex;gap:8px}
+.conf-btn{padding:8px 20px;border-radius:16px;border:none;font-size:11px;font-weight:600;cursor:pointer}
+.conf-btn.yes{background:#FE5000;color:#fff}
+.conf-btn.no{background:rgba(255,255,255,.1);color:#aaa;border:1px solid #444}
+.conf-btn:active{transform:scale(.95)}
 
-        /* ── Screen (each app or launcher view) ── */
-        .screen {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            display: none;
-            flex-direction: column;
-        }
-        .screen.active { display: flex; }
+/* ═══ MATH ═══ */
+#app-math{background:#0d0d1a}
+.mbody{flex:1;display:flex;flex-direction:column;padding:3px 8px}
+.mhud{display:flex;justify-content:space-between;font-size:9px;color:#777;margin-bottom:1px}
+.mhud .fire{color:#FE5000}
+.meq-area{text-align:center;padding:4px 0 3px}
+.meq{font-size:28px;font-weight:700}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:0 8px;align-content:center}
+.mbtn{height:40px;border-radius:10px;border:2px solid #333;background:#111;color:#fff;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all .15s}
+.mbtn:active{transform:scale(.95)}
+.mbtn.correct{border-color:#4CAF50;background:#0a2a0a;color:#4CAF50}
+.mbtn.wrong{border-color:#f44336;background:#2a0a0a;color:#f44336}
+.mbtn.reveal{border-color:#4CAF50;background:#0a2a0a;color:#4CAF50}
+.mfb{text-align:center;font-size:15px;min-height:20px;padding-top:1px}
+.mscore-bar{display:flex;justify-content:space-around;padding:2px 4px;background:rgba(255,255,255,.03);border-radius:6px;margin-top:2px}
+.mscore-item{text-align:center}
+.mscore-item .val{font-size:12px;font-weight:700;color:#FE5000}
+.mscore-item .lab{font-size:7px;color:#555}
+.levelup-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:20;text-align:center}
+.levelup-overlay.show{display:flex}
+.lvl-emoji{font-size:46px;animation:bounce .6s ease infinite alternate}
+.lvl-text{font-size:17px;font-weight:700;color:#FE5000;margin:4px 0}
+.lvl-sub{font-size:10px;color:#aaa}
+.lvl-btn{margin-top:10px;padding:8px 22px;background:#FE5000;border:none;border-radius:20px;color:#fff;font-size:11px;font-weight:600;cursor:pointer}
+.lvl-btn:active{background:#e04500;transform:scale(.95)}
+@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-8px)}}
 
-        /* ── Launcher menu ── */
-        #launcherScreen {
-            padding: 6px 10px;
-        }
-        #launcherScreen h2 {
-            font-size: 13px; font-weight: 600;
-            color: #FE5000; margin-bottom: 6px;
-            letter-spacing: 0.5px;
-        }
-        .app-list { flex: 1; overflow: hidden; }
-        .app-item {
-            display: flex; align-items: center; gap: 8px;
-            padding: 7px 8px; margin-bottom: 3px;
-            border-radius: 6px;
-            transition: background 0.15s;
-            cursor: pointer;
-        }
-        .app-item.selected {
-            background: #1a1a2e;
-            border: 1px solid #FE5000;
-        }
-        .app-item:not(.selected) {
-            border: 1px solid transparent;
-        }
-        .app-icon {
-            width: 28px; height: 28px;
-            border-radius: 6px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 15px; flex-shrink: 0;
-        }
-        .app-meta { flex: 1; min-width: 0; }
-        .app-name { font-size: 11px; font-weight: 600; color: #eee; }
-        .app-desc { font-size: 8px; color: #777; margin-top: 1px; }
+/* ═══ ANIMALS ═══ */
+#app-animals{background:#0d1a0d}
+.acard{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 10px;position:relative;touch-action:pan-x}
+.acard .emoji{font-size:56px;margin-bottom:2px}
+.acard .nm{font-size:16px;font-weight:700}
+.acard .ft{font-size:10px;color:#aaa;margin-top:4px;line-height:1.4;max-height:50px;overflow:hidden}
+.acard .arrows{position:absolute;top:50%;width:100%;display:flex;justify-content:space-between;padding:0 3px;transform:translateY(-50%);pointer-events:none}
+.acard .arr{width:24px;height:40px;background:rgba(255,255,255,.08);border:none;border-radius:8px;color:#555;font-size:13px;display:flex;align-items:center;justify-content:center;pointer-events:all;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.acard .arr:active{background:rgba(255,80,0,.3);color:#fff}
+.abtn{margin-top:5px;padding:6px 20px;background:#FE5000;border:none;border-radius:18px;color:#fff;font-size:10px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.abtn:active{background:#e04500;transform:scale(.95)}
 
-        /* ── App header (inside apps) ── */
-        .app-header {
-            height: 22px; min-height: 22px;
-            display: flex; align-items: center;
-            padding: 0 8px;
-            background: #111;
-            border-bottom: 1px solid #222;
-            font-size: 10px; color: #FE5000;
-            gap: 6px;
-        }
-        .app-header .back-hint {
-            font-size: 8px; color: #555;
-            margin-left: auto;
-        }
+/* ═══ QUESTIONS ═══ */
+#app-questions{background:#1a0d1a}
+.qbody{flex:1;display:flex;flex-direction:column;padding:5px 7px}
+.qcard{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,.04);border-radius:12px;padding:8px;text-align:center;touch-action:pan-x}
+.qcard .qi{font-size:24px;margin-bottom:2px}
+.qcard .qt{font-size:12px;font-weight:600;line-height:1.3;padding:0 4px}
+.qcard .qa{font-size:10px;color:#bbb;margin-top:5px;line-height:1.4;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:0 4px;text-align:left;width:100%}
+.qacts{display:flex;gap:5px;margin-top:4px;flex-shrink:0}
+.qbtn{flex:1;height:30px;border-radius:10px;border:none;font-size:10px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;gap:3px}
+.qbtn:active{transform:scale(.95)}
+.qbtn.ask{background:#FE5000;color:#fff}
+.qbtn.nxt{background:rgba(255,255,255,.1);color:#aaa}
 
-        /* ── Generic app content area ── */
-        .app-body {
-            flex: 1; padding: 8px;
-            overflow: hidden;
-            display: flex; flex-direction: column;
-        }
+/* ═══ MAPS ═══ */
+#app-maps{background:#0a0a0a}
+.map-wrap{flex:1;position:relative;overflow:hidden}
+#leafletMap{width:100%;height:100%;background:#1a1a2e}
+.map-ov{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.85) 30%);padding:4px 6px 5px;z-index:500}
+.map-chips{display:flex;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:1px 0;touch-action:pan-x}
+.map-chip{flex-shrink:0;padding:5px 9px;border-radius:12px;background:rgba(30,30,50,.95);color:#ccc;font-size:9px;font-weight:600;border:1.5px solid rgba(255,255,255,.12);cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.map-chip:active,.map-chip.act{background:#FE5000;border-color:#FE5000;color:#fff}
+.map-info{font-size:8px;color:#777;text-align:center;margin-top:2px}
+.map-ctrls{position:absolute;top:28px;right:4px;display:flex;flex-direction:column;gap:3px;z-index:500}
+.map-cbtn{width:26px;height:26px;background:rgba(15,15,30,.95);border:1.5px solid #555;border-radius:8px;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.map-cbtn:active{background:#FE5000;border-color:#FE5000}
+.map-lyr{position:absolute;top:28px;left:4px;z-index:500;padding:4px 7px;border-radius:8px;background:rgba(15,15,30,.95);border:1.5px solid #555;color:#ccc;font-size:8px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.map-lyr:active{background:#FE5000;border-color:#FE5000}
+.map-loc{position:absolute;top:58px;left:4px;z-index:500;padding:4px 7px;border-radius:8px;background:rgba(15,15,30,.95);border:1.5px solid #555;color:#ccc;font-size:8px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.map-loc:active{background:#FE5000;border-color:#FE5000}
+.leaflet-control-attribution,.leaflet-control-zoom{display:none!important}
 
-        /* ── Animal app ── */
-        .animal-display {
-            flex: 1; display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            text-align: center;
-        }
-        .animal-emoji { font-size: 52px; margin-bottom: 6px; }
-        .animal-name { font-size: 16px; font-weight: 700; color: #fff; }
-        .animal-fact { font-size: 10px; color: #aaa; margin-top: 6px; padding: 0 4px; line-height: 1.4; }
-        .animal-nav { font-size: 8px; color: #555; margin-top: 8px; }
+/* ═══ STORIES ═══ */
+#app-stories{background:#1a0d0d}
+.stbody{flex:1;padding:4px 6px;display:flex;flex-direction:column;overflow:hidden}
+.st-tabs{display:flex;gap:4px;margin-bottom:3px;flex-shrink:0}
+.st-tab{flex:1;padding:4px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid transparent;color:#888;font-size:9px;font-weight:600;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.st-tab.act{border-color:#FE5000;color:#FE5000;background:rgba(255,80,0,.1)}
+.st-tab:active{transform:scale(.97)}
+.st-scene{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.st-img{width:100%;height:88px;min-height:88px;border-radius:8px;overflow:hidden;background:#111;display:flex;align-items:center;justify-content:center;margin-bottom:3px;flex-shrink:0}
+.st-img svg{width:100%;height:100%}
+.st-text{flex:1;font-size:10px;color:#ccc;line-height:1.45;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:0 2px}
+.st-acts{display:flex;gap:4px;margin-top:3px;flex-shrink:0}
+.st-btn{flex:1;height:30px;border-radius:10px;border:none;font-size:9px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;gap:2px;padding:0 4px}
+.st-btn:active{transform:scale(.95)}
+.st-btn.pri{background:#FE5000;color:#fff}
+.st-btn.sec{background:rgba(255,255,255,.1);color:#aaa}
+.st-pick{display:flex;gap:4px;margin-bottom:3px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0;touch-action:pan-x;padding:1px 0}
+.st-pc{flex-shrink:0;padding:3px 8px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid transparent;color:#aaa;font-size:9px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.st-pc.act{border-color:#FE5000;color:#FE5000;background:rgba(255,80,0,.1)}
+.st-pc:active{transform:scale(.95)}
 
-        /* ── Math app ── */
-        .math-problem {
-            text-align: center; padding: 10px 0;
-        }
-        .math-equation { font-size: 28px; font-weight: 700; color: #fff; }
-        .math-answers { margin-top: 12px; }
-        .math-option {
-            display: inline-block;
-            width: 46px; height: 32px;
-            line-height: 32px; text-align: center;
-            margin: 3px;
-            border-radius: 6px;
-            font-size: 16px; font-weight: 600;
-            background: #1a1a2e; color: #ccc;
-            border: 1px solid #333;
-        }
-        .math-option.selected {
-            border-color: #FE5000; color: #FE5000;
-            background: #1a0a00;
-        }
-        .math-option.correct { border-color: #4CAF50; color: #4CAF50; background: #0a1a0a; }
-        .math-option.wrong { border-color: #f44336; color: #f44336; background: #1a0a0a; }
-        .math-score {
-            font-size: 10px; color: #777;
-            text-align: center; margin-top: 8px;
-        }
-        .math-level {
-            font-size: 9px; color: #FE5000;
-            text-align: center; margin-bottom: 4px;
-        }
-        .math-feedback {
-            font-size: 20px; text-align: center;
-            margin-top: 6px; min-height: 24px;
-        }
+/* ═══ MYSTERY ═══ */
+#app-mystery{background:#0a0d1a}
+.mybod{flex:1;display:flex;flex-direction:column;padding:4px 6px;overflow:hidden}
+.my-scene{width:100%;height:72px;min-height:72px;border-radius:8px;overflow:hidden;background:#111;margin-bottom:4px;flex-shrink:0}
+.my-scene svg{width:100%;height:100%}
+.my-clues{font-size:8px;color:#FE5000;margin-bottom:3px;padding:3px 4px;background:rgba(255,80,0,.08);border-radius:6px;flex-shrink:0}
+.my-text{font-size:10px;color:#ccc;line-height:1.35;margin-bottom:5px;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;max-height:60px;padding:0 2px}
+.my-choices{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.my-choice{padding:8px 8px;border-radius:8px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.12);color:#ddd;font-size:10px;cursor:pointer;-webkit-tap-highlight-color:transparent;text-align:left}
+.my-choice:active{background:rgba(255,80,0,.2);border-color:#FE5000}
+.my-end{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8px}
+.my-end .big{font-size:36px;margin-bottom:4px}
+.my-end .msg{font-size:14px;font-weight:700;color:#FE5000;margin-bottom:3px}
+.my-end .det{font-size:10px;color:#aaa;line-height:1.4;margin-bottom:4px}
+.my-end .clue-list{font-size:8px;color:#FE5000;margin-bottom:6px}
+.my-restart{padding:8px 20px;background:#FE5000;border:none;border-radius:16px;color:#fff;font-size:10px;font-weight:600;cursor:pointer}
+.my-restart:active{transform:scale(.95)}
 
-        /* ── Maps app ── */
-        .maps-body { align-items: center; justify-content: center; text-align: center; }
-        .maps-prompt { font-size: 11px; color: #aaa; line-height: 1.5; padding: 0 10px; }
-        .maps-result { font-size: 10px; color: #ddd; line-height: 1.5; padding: 6px; text-align: left; flex: 1; overflow: hidden; }
-        .maps-status { font-size: 9px; color: #FE5000; margin-bottom: 6px; }
-
-        /* ── Question app ── */
-        .question-display { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .question-icon { font-size: 30px; margin-bottom: 6px; }
-        .question-text { font-size: 13px; font-weight: 600; color: #fff; padding: 0 6px; line-height: 1.4; }
-        .question-answer { font-size: 10px; color: #aaa; margin-top: 8px; padding: 0 6px; line-height: 1.4; overflow: hidden; flex: 1; }
-        .question-hint { font-size: 8px; color: #555; margin-top: 6px; }
-
-        /* ── Flash effect ── */
-        @keyframes flashBorder {
-            0% { box-shadow: inset 0 0 0 3px var(--flash-color, #FE5000); }
-            100% { box-shadow: inset 0 0 0 0px transparent; }
-        }
-        .flash { animation: flashBorder 0.3s ease-out; }
-    </style>
+/* ═══ AI OVERLAY ═══ */
+#aiOverlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:1000;text-align:center;padding:14px}
+#aiOverlay.act{display:flex}
+.ai-b{font-size:40px;margin-bottom:3px}
+.ai-l{font-size:12px;font-weight:700;color:#FE5000;margin-bottom:2px}
+.ai-s{font-size:10px;color:#777;margin-bottom:6px}
+.ai-r{font-size:10px;color:#ddd;line-height:1.5;max-height:100px;overflow-y:auto;text-align:left;width:100%;padding:6px;background:rgba(255,255,255,.05);border-radius:8px}
+.ai-x{margin-top:8px;padding:6px 26px;background:rgba(255,255,255,.1);border:1px solid #444;border-radius:18px;color:#aaa;font-size:9px;cursor:pointer}
+.ai-x:active{background:rgba(255,80,0,.3);border-color:#FE5000}
+</style>
 </head>
 <body>
 <div id="shell">
-    <!-- Status bar -->
-    <div id="statusBar">
-        <span class="clock" id="clock">--:--</span>
-        <span style="font-size:8px;color:#555;" id="appLabel">BunnyLauncher</span>
-        <span class="indicator">
-            <span class="dot on" id="netDot"></span>
-        </span>
-    </div>
+<div id="content">
 
-    <!-- Content area — screens stack here -->
-    <div id="content">
+<!-- LAUNCHER -->
+<div id="launcherScreen" class="screen active">
+<div class="lhdr">
+<span class="bunny">🐰</span><span class="name">BUNNY APPS</span>
+<button class="exit-btn" onclick="confirmExit()" title="Exit">⏻</button>
+</div>
+<div class="agrid" id="appGrid"></div>
+<div class="lhint">tap to open • hold side button → Bunny AI</div>
+</div>
 
-        <!-- ======== LAUNCHER SCREEN ======== -->
-        <div id="launcherScreen" class="screen active">
-            <h2>🐰 BunnyApps</h2>
-            <div class="app-list" id="appList"></div>
-        </div>
+<!-- ANIMALS -->
+<div id="app-animals" class="screen">
+<div class="topbar"><button class="bk" onclick="goHome()">◀</button><span class="ttl">🦁 Animals</span><span class="spacer"></span></div>
+<div class="acard" id="animalCard">
+<div class="arrows"><button class="arr" onclick="animalNav(-1)">◀</button><button class="arr" onclick="animalNav(1)">▶</button></div>
+<div class="emoji" id="aEmoji">🐘</div><div class="nm" id="aName">Elephant</div><div class="ft" id="aFact"></div>
+<button class="abtn" onclick="animalAsk()">🔊 Tell me more!</button>
+</div>
+</div>
 
-        <!-- ======== ANIMAL ENCYCLOPEDIA ======== -->
-        <div id="app-animals" class="screen">
-            <div class="app-header">
-                <span>🦁 Animals</span>
-                <span class="back-hint">HOLD → back</span>
-            </div>
-            <div class="app-body">
-                <div class="animal-display">
-                    <div class="animal-emoji" id="animalEmoji">🐘</div>
-                    <div class="animal-name" id="animalName">Elephant</div>
-                    <div class="animal-fact" id="animalFact">Loading...</div>
-                    <div class="animal-nav">⬆ scroll ⬇</div>
-                </div>
-            </div>
-        </div>
+<!-- MATH -->
+<div id="app-math" class="screen">
+<div class="topbar"><button class="bk" onclick="goHome()">◀</button><span class="ttl">🔢 MathQuest</span><span class="spacer"></span></div>
+<div class="mbody">
+<div class="mhud"><span id="mLvl">Level 1</span><span id="mStreak" class="fire"></span></div>
+<div class="meq-area"><div class="meq" id="mEq">3 + 4 = ?</div></div>
+<div class="mgrid" id="mGrid"></div>
+<div class="mfb" id="mFb"></div>
+<div class="mscore-bar">
+<div class="mscore-item"><div class="val" id="mScV">0</div><div class="lab">SCORE</div></div>
+<div class="mscore-item"><div class="val" id="mBstV">0</div><div class="lab">BEST</div></div>
+<div class="mscore-item"><div class="val" id="mCorV">0</div><div class="lab">RIGHT</div></div>
+<div class="mscore-item"><div class="val" id="mTotV">0</div><div class="lab">TOTAL</div></div>
+</div></div>
+<div class="levelup-overlay" id="lvlUp">
+<div class="lvl-emoji" id="lvlE">🎉</div><div class="lvl-text" id="lvlT">Level 2!</div><div class="lvl-sub" id="lvlS">Amazing!</div>
+<button class="lvl-btn" onclick="dismissLvl()">Let's Go! →</button>
+</div>
+</div>
 
-        <!-- ======== MATH QUEST ======== -->
-        <div id="app-math" class="screen">
-            <div class="app-header">
-                <span>🔢 MathQuest</span>
-                <span class="back-hint">HOLD → back</span>
-            </div>
-            <div class="app-body">
-                <div class="math-level" id="mathLevel">Level 1</div>
-                <div class="math-problem">
-                    <div class="math-equation" id="mathEquation">3 + 4</div>
-                    <div class="math-answers" id="mathAnswers"></div>
-                    <div class="math-feedback" id="mathFeedback"></div>
-                </div>
-                <div class="math-score" id="mathScore">Score: 0 | Streak: 0</div>
-            </div>
-        </div>
+<!-- QUESTIONS -->
+<div id="app-questions" class="screen">
+<div class="topbar"><button class="bk" onclick="goHome()">◀</button><span class="ttl">❓ QuestionBox</span><span class="spacer"></span></div>
+<div class="qbody">
+<div class="qcard" id="qCard"><div class="qi">🤔</div><div class="qt" id="qText"></div><div class="qa" id="qAns"></div></div>
+<div class="qacts"><button class="qbtn nxt" onclick="qNext()">⏭ Next</button><button class="qbtn ask" onclick="qAsk()">🔊 Ask!</button></div>
+</div>
+</div>
 
-        <!-- ======== QUESTION BOX ======== -->
-        <div id="app-questions" class="screen">
-            <div class="app-header">
-                <span>❓ QuestionBox</span>
-                <span class="back-hint">HOLD → back</span>
-            </div>
-            <div class="app-body">
-                <div class="question-display">
-                    <div class="question-icon">🤔</div>
-                    <div class="question-text" id="questionText">Why is the sky blue?</div>
-                    <div class="question-answer" id="questionAnswer"></div>
-                    <div class="question-hint" id="questionHint">CLICK to ask • SCROLL for more</div>
-                </div>
-            </div>
-        </div>
+<!-- MAPS -->
+<div id="app-maps" class="screen">
+<div class="topbar"><button class="bk" onclick="goHome()">◀</button><span class="ttl">🗺️ Explorer</span><span class="spacer"></span></div>
+<div class="map-wrap">
+<div id="leafletMap"></div>
+<div class="map-ctrls"><button class="map-cbtn" onclick="mapZ(1)">+</button><button class="map-cbtn" onclick="mapZ(-1)">−</button></div>
+<button class="map-lyr" id="mapLyr" onclick="toggleLyr()">🛰️ Satellite</button>
+<button class="map-loc" onclick="geoLocate()">📍 Find Me</button>
+<div class="map-ov"><div class="map-chips" id="mapChips"></div><div class="map-info" id="mapInfo">Tap to explore!</div></div>
+</div>
+</div>
 
-        <!-- ======== MAPS / EXPLORE ======== -->
-        <div id="app-maps" class="screen">
-            <div class="app-header">
-                <span>🗺️ Explorer</span>
-                <span class="back-hint">HOLD → back</span>
-            </div>
-            <div class="app-body maps-body" id="mapsBody">
-                <div class="maps-status" id="mapsStatus">Ready</div>
-                <div class="maps-prompt" id="mapsPrompt">
-                    CLICK to ask:<br>
-                    "What's nearby?"<br>
-                    "How do I get to…?"<br><br>
-                    SCROLL to cycle topics:<br>
-                    🏔️ Nature • 🏛️ Places • 🍽️ Food
-                </div>
-                <div class="maps-result" id="mapsResult" style="display:none;"></div>
-            </div>
-        </div>
+<!-- STORIES -->
+<div id="app-stories" class="screen">
+<div class="topbar"><button class="bk" onclick="goHome()">◀</button><span class="ttl">📖 Stories</span><span class="spacer"></span></div>
+<div class="stbody">
+<div class="st-tabs"><button class="st-tab act" id="tabRead" onclick="stTab('read')">📚 Read Aloud</button><button class="st-tab" id="tabAdv" onclick="stTab('adv')">🎮 Adventure</button></div>
+<div id="stReadPanel" class="st-scene"></div>
+<div id="stAdvPanel" class="st-scene" style="display:none"></div>
+</div>
+</div>
 
-        <!-- ======== STORY TIME ======== -->
-        <div id="app-stories" class="screen">
-            <div class="app-header">
-                <span>📖 StoryTime</span>
-                <span class="back-hint">HOLD → back</span>
-            </div>
-            <div class="app-body">
-                <div class="question-display">
-                    <div class="question-icon" id="storyIcon">📖</div>
-                    <div class="question-text" id="storyTitle">Adventure awaits!</div>
-                    <div class="question-answer" id="storyText" style="text-align:left;">
-                        CLICK to start a new story.<br>
-                        The AI will tell you a tale and ask what you want to do next!
-                    </div>
-                    <div class="question-hint">CLICK → continue • SCROLL → choices</div>
-                </div>
-            </div>
-        </div>
+<!-- MYSTERY -->
+<div id="app-mystery" class="screen">
+<div class="topbar"><button class="bk" onclick="goHome()">◀</button><span class="ttl">🔍 Mystery</span><span class="spacer"></span></div>
+<div class="mybod" id="myBody"></div>
+</div>
 
-    </div><!-- /content -->
-</div><!-- /shell -->
+</div>
 
+<!-- CONFIRM EXIT -->
+<div class="confirm-overlay" id="exitConf">
+<div class="conf-icon">👋</div>
+<div class="conf-msg">Exit Bunny Apps?</div>
+<div class="conf-btns">
+<button class="conf-btn no" onclick="cancelExit()">Stay</button>
+<button class="conf-btn yes" onclick="doExit()">Exit</button>
+</div>
+</div>
+
+<!-- AI OVERLAY -->
+<div id="aiOverlay">
+<div class="ai-b">🐰</div><div class="ai-l">Bunny AI</div><div class="ai-s" id="aiS">Listening...</div>
+<div class="ai-r" id="aiR" style="display:none"></div>
+<button class="ai-x" onclick="closeAI()">✕ Close</button>
+</div>
+
+</div>
 <script>
-// ═══════════════════════════════════════════
-//  R1 BUNNY LAUNCHER — Modular App Framework
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════════
+//  BUNNY LAUNCHER v4 — Polished
+// ═══════════════════════════════════════
+const ST={activeApp:null,s:{}},SK='bunny_v4';
+function $(id){return document.getElementById(id)}
 
-// ── Global State ──
-const STATE = {
-    activeApp: null,       // null = launcher, or app key string
-    launcherIndex: 0,      // selected item in launcher menu
-    appStates: {},         // per-app persisted state
+// Storage
+async function save(){try{const d=JSON.stringify({a:ST.activeApp,s:ST.s});window.creationStorage?await window.creationStorage.plain.setItem(SK,btoa(d)):localStorage.setItem(SK,d)}catch(e){}}
+async function load(){try{let r;if(window.creationStorage){const s=await window.creationStorage.plain.getItem(SK);if(s)r=JSON.parse(atob(s))}else{const s=localStorage.getItem(SK);if(s)r=JSON.parse(s)}if(r){ST.activeApp=r.a||null;ST.s=r.s||{}}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
+
+// LLM
+function askLLM(msg,voice=true){
+    if(window.PluginMessageHandler)PluginMessageHandler.postMessage(JSON.stringify({message:msg,useLLM:true,wantsR1Response:voice}));
+    else setTimeout(()=>window.onPluginMessage&&window.onPluginMessage({message:'[Mock] '+msg.substring(0,80),data:null}),600);
+}
+let llmCB=null,aiOn=false;
+window.onPluginMessage=function(d){const m=d.data||d.message||'';if(aiOn){$('aiR').textContent=m.substring(0,300);$('aiR').style.display='';$('aiS').textContent='Bunny says:';return}if(llmCB){llmCB(m);llmCB=null}};
+
+// Screens
+function showScr(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id)?.classList.add('active')}
+function goHome(){ST.activeApp=null;showScr('launcherScreen');save()}
+
+// Exit
+function confirmExit(){$('exitConf').classList.add('show')}
+function cancelExit(){$('exitConf').classList.remove('show')}
+function doExit(){if(window.closeWebView)closeWebView.postMessage('');else window.close&&window.close()}
+
+// AI Overlay
+function openAI(){aiOn=true;$('aiOverlay').classList.add('act');$('aiS').textContent='Listening...';$('aiR').style.display='none';askLLM("You are Bunny AI, a sweet cartoon rabbit friend for kids. Say hi warmly, ask what they want to know. 2 short fun sentences.",true)}
+function closeAI(){aiOn=false;$('aiOverlay').classList.remove('act')}
+
+// HW
+window.addEventListener('longPressStart',()=>{window._lp=true});
+window.addEventListener('longPressEnd',()=>{if(window._lp)openAI();window._lp=false});
+window.addEventListener('scrollUp',()=>{if(ST.activeApp==='animals')animalNav(-1);else if(ST.activeApp==='maps'&&leafMap)leafMap.zoomIn()});
+window.addEventListener('scrollDown',()=>{if(ST.activeApp==='animals')animalNav(1);else if(ST.activeApp==='maps'&&leafMap)leafMap.zoomOut()});
+window.addEventListener('sideClick',()=>{if(ST.activeApp==='animals')animalAsk();else if(ST.activeApp==='questions')qAsk()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(aiOn)closeAI();else if($('exitConf').classList.contains('show'))cancelExit();else if(ST.activeApp)goHome();else confirmExit()}});
+
+// ═══ LAUNCHER ═══
+const APPS=[
+{k:'animals',i:'🦁',n:'Animals',bg:'linear-gradient(135deg,#1a3a1a,#0d260d)'},
+{k:'math',i:'🔢',n:'Math',bg:'linear-gradient(135deg,#1a1a3a,#0d0d26)'},
+{k:'questions',i:'❓',n:'Questions',bg:'linear-gradient(135deg,#2a1a2a,#1a0d1a)'},
+{k:'maps',i:'🗺️',n:'Explorer',bg:'linear-gradient(135deg,#0d2a2a,#0a1a1a)'},
+{k:'stories',i:'📖',n:'Stories',bg:'linear-gradient(135deg,#2a1a0d,#1a0d0a)'},
+{k:'mystery',i:'🔍',n:'Mystery',bg:'linear-gradient(135deg,#1a0d2a,#0d0a1a)'},
+];
+function renderLauncher(){$('appGrid').innerHTML=APPS.map(a=>`<div class="atile" style="background:${a.bg}" onclick="launch('${a.k}')"><div class="ti">${a.i}</div><div class="tn">${a.n}</div></div>`).join('')}
+function launch(k){ST.activeApp=k;showScr('app-'+k);appInit[k]?.();save()}
+const appInit={};
+
+// ═══ ANIMALS ═══
+const animals=[
+{e:'🐘',n:'Elephant',f:'Elephants recognize themselves in mirrors and mourn their dead.'},{e:'🦁',n:'Lion',f:"A lion's roar can be heard from 8 kilometers away!"},
+{e:'🐙',n:'Octopus',f:'Octopuses have 3 hearts and blue blood. Each arm thinks on its own.'},{e:'🦅',n:'Eagle',f:'Eagles spot fish from over 1 km up. Eyes 8x sharper than ours!'},
+{e:'🐬',n:'Dolphin',f:'Dolphins sleep with one eye open — half their brain stays awake.'},{e:'🐢',n:'Turtle',f:'Sea turtles existed for 110 million years — older than dinosaurs!'},
+{e:'🦜',n:'Parrot',f:'African Greys learn 1,000+ words and understand colors and shapes.'},{e:'🐺',n:'Wolf',f:'Wolves travel 50 km daily and howl to communicate over 16 km.'},
+{e:'🐝',n:'Bee',f:'One bee visits 5,000 flowers a day and dances to share directions.'},{e:'🦈',n:'Shark',f:'Sharks detect a single blood drop in an Olympic swimming pool.'},
+{e:'🐸',n:'Frog',f:'Some frogs freeze solid in winter and thaw back to life in spring!'},{e:'🦉',n:'Owl',f:"Owls rotate their heads 270° since they can't move their eyeballs."},
+{e:'🐋',n:'Whale',f:'Blue whale hearts are car-sized. Their beat can be heard 3 km away.'},{e:'🦎',n:'Chameleon',f:'Chameleons change color to show mood, not for camouflage!'},
+{e:'🐊',n:'Crocodile',f:"Crocs haven't changed in 200 million years — living dinosaurs."},
+];
+let aI=0;
+function aR(){const a=animals[aI];$('aEmoji').textContent=a.e;$('aName').textContent=a.n;$('aFact').textContent=a.f}
+function animalNav(d){aI=(aI+d+animals.length)%animals.length;aR();ST.s.animals={i:aI};save()}
+function animalAsk(){const a=animals[aI];$('aFact').textContent='Asking Bunny AI...';llmCB=m=>{$('aFact').textContent=m.substring(0,200)};askLLM(`Tell a 5-year-old one amazing fact about ${a.n}. 2 short sentences.`,true)}
+appInit.animals=()=>{aI=(ST.s.animals||{}).i||0;aR()};
+(function(){let sx=0;const c=$('animalCard');c.addEventListener('touchstart',e=>{sx=e.touches[0].clientX},{passive:true});c.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>30)animalNav(dx<0?1:-1)},{passive:true})})();
+
+// ═══ MATH ═══
+let mSc=0,mSt=0,mLv=1,mBs=0,mCo=0,mTo=0,mP=null,mDn=false;
+const lvlMsg=[{e:'🌟',t:'Level 2!',s:'Addition pro! Bigger numbers!'},{e:'🚀',t:'Level 3!',s:'Subtraction time!'},{e:'🔥',t:'Level 4!',s:'+ and − mixed up!'},{e:'⚡',t:'Level 5!',s:'Multiplication! You\'re a star!'},{e:'👑',t:'Level 6!',s:'Math champion!'}];
+function mGen(){
+    mDn=false;let a,b,op,ans;
+    if(mLv<=2){a=Math.floor(Math.random()*(mLv*5))+1;b=Math.floor(Math.random()*(mLv*5))+1;op='+';ans=a+b}
+    else if(mLv<=4){a=Math.floor(Math.random()*12)+2;b=Math.floor(Math.random()*Math.min(a,10))+1;op=Math.random()>.5?'+':'−';ans=op==='+'?a+b:a-b}
+    else{a=Math.floor(Math.random()*10)+1;b=Math.floor(Math.random()*10)+1;op='×';ans=a*b}
+    const opts=new Set([ans]);while(opts.size<4){const w=ans+(Math.floor(Math.random()*10)-5||1);if(w>=0)opts.add(w)}
+    mP={a,b,op,ans,opts:[...opts].sort((x,y)=>x-y)};mRn()
+}
+function mRn(){const p=mP;$('mEq').textContent=`${p.a} ${p.op} ${p.b} = ?`;$('mLvl').textContent=`Level ${mLv}`;$('mStreak').textContent=mSt>0?'🔥'.repeat(Math.min(mSt,5)):'';$('mGrid').innerHTML=p.opts.map((o,i)=>`<button class="mbtn" id="mb${i}" onclick="mPk(${i})">${o}</button>`).join('');$('mFb').textContent='';$('mScV').textContent=mSc;$('mBstV').textContent=mBs;$('mCorV').textContent=mCo;$('mTotV').textContent=mTo}
+function mPk(i){
+    if(mDn){mGen();return}mDn=true;mTo++;const p=mP,ok=p.opts[i]===p.ans;
+    if(ok){mSc+=mLv*10;mSt++;mCo++;if(mSc>mBs)mBs=mSc;$('mb'+i).classList.add('correct');$('mFb').textContent='🎉 Correct!';if(mSt>0&&mSt%5===0&&mLv<6){mLv++;showLvl(mLv)}}
+    else{mSt=0;$('mb'+i).classList.add('wrong');mP.opts.forEach((o,j)=>{if(o===mP.ans)$('mb'+j).classList.add('reveal')});$('mFb').textContent=`❌ It's ${mP.ans}`}
+    $('mScV').textContent=mSc;$('mBstV').textContent=mBs;$('mCorV').textContent=mCo;$('mTotV').textContent=mTo;$('mStreak').textContent=mSt>0?'🔥'.repeat(Math.min(mSt,5)):'';
+    ST.s.math={sc:mSc,st:mSt,lv:mLv,bs:mBs,co:mCo,to:mTo};save()
+}
+function showLvl(lv){const m=lvlMsg[Math.min(lv-2,lvlMsg.length-1)];$('lvlE').textContent=m.e;$('lvlT').textContent=m.t;$('lvlS').textContent=m.s;$('lvlUp').classList.add('show')}
+function dismissLvl(){$('lvlUp').classList.remove('show');mGen()}
+appInit.math=()=>{const s=ST.s.math||{};mSc=s.sc||0;mSt=s.st||0;mLv=s.lv||1;mBs=s.bs||0;mCo=s.co||0;mTo=s.to||0;mGen()};
+
+// ═══ QUESTIONS ═══
+const QS=["Why is the sky blue?","How do volcanoes work?","Why do we dream?","How do planes fly?","Why is the ocean salty?","What makes thunder?","How do plants eat sunlight?","Why do stars twinkle?","What are clouds made of?","How do rainbows form?","Why do leaves change color?","How do magnets work?","What causes earthquakes?","Why do cats purr?","How does the moon glow?","How do fish breathe?","Why do we have fingerprints?","How do birds know where to fly?","Why does the wind blow?","What makes ice cream cold?"];
+const QA={"Why is the sky blue?":"Sunlight has all rainbow colors mixed. When it hits tiny bits of air, blue bounces around the most — like a ball in a room! That's why the sky looks blue.","How do volcanoes work?":"Deep underground, rocks get SO hot they melt into gooey lava. Pressure builds up like shaking a soda bottle. When it's too strong — BOOM — lava shoots up!","Why do we dream?":"When you sleep, your brain plays movies with your memories! It mixes things you saw during the day. That's why dreams can be funny and weird!","How do planes fly?":"Wing shape makes air go faster on top than bottom. This pushes the plane UP like magic! Engines push it forward so the wings keep working.","Why is the ocean salty?":"Rivers wash tiny salt bits from rocks into the ocean. The sun takes water back up (making clouds!) but leaves salt behind. After millions of years — very salty!","What makes thunder?":"Lightning is SO hot it makes air explode outward. That explosion makes the BOOM we call thunder! You see the flash first because light is faster than sound.","How do plants eat sunlight?":"Plants have tiny green helpers called chlorophyll. These grab sunlight and mix it with water and air to make food — like a tiny kitchen!","Why do stars twinkle?":"Stars don't actually blink! Their light travels through wobbly air above us. The moving air bends the light, making it shimmer — like looking through a pool!","What are clouds made of?":"Clouds are billions of tiny water drops floating in the sky — so small they're lighter than air! Sun warms water on the ground, and it floats up and cools.","How do rainbows form?":"When sunlight hits raindrops, light bends and splits into hidden colors. Each raindrop is a tiny prism! You need sun behind you and rain in front."};
+let qI=0;
+function qR(){$('qText').textContent=QS[qI];$('qAns').textContent=''}
+function qNext(){qI=(qI+1)%QS.length;qR();ST.s.q={i:qI}}
+function qAsk(){const q=QS[qI],a=QA[q];if(a){$('qAns').textContent=a;askLLM(`Read this aloud in a friendly voice for a child: ${a}`,true);return}$('qAns').textContent='Thinking...';llmCB=m=>{$('qAns').textContent=m.substring(0,250)};askLLM(`Answer for a curious 5-year-old in 3 simple sentences: ${q}`,true)}
+appInit.questions=()=>{qI=(ST.s.q||{}).i||0;qR()};
+(function(){let sx=0;const c=$('qCard');c.addEventListener('touchstart',e=>{sx=e.touches[0].clientX},{passive:true});c.addEventListener('touchend',e=>{if(Math.abs(e.changedTouches[0].clientX-sx)>30)qNext()},{passive:true})})();
+
+// ═══ MAPS ═══
+const DEFAULT_LOC=[6.244,-75.581];
+let leafMap=null,mapMk=[],mapSat=false,tileL=null,satL=null,userLoc=null;
+const POI={parks:[{n:'Parque Explora 🔬',lt:6.2707,ln:-75.5656,d:'Science museum!'},{n:'Jardín Botánico 🌺',lt:6.2714,ln:-75.5635,d:'Flowers & butterflies'},{n:'Parque Arví 🌲',lt:6.2833,ln:-75.4983,d:'Cable car forest'},{n:'Pies Descalzos 🦶',lt:6.2488,ln:-75.5729,d:'Walk barefoot!'}],play:[{n:'Parque Norte 🎢',lt:6.2758,ln:-75.5645,d:'Rides!'},{n:'Happy City 🎡',lt:6.1925,ln:-75.5584,d:'Amusement park'},{n:'UVA Imaginación 🎨',lt:6.268,ln:-75.548,d:'Art and play'}],treats:[{n:'Mercado del Río 🍽️',lt:6.2376,ln:-75.5782,d:'Food hall!'},{n:'Crepes & Waffles 🧇',lt:6.2094,ln:-75.5693,d:'Sweet & savory'},{n:'El Poblado 🍦',lt:6.2107,ln:-75.571,d:'Ice cream!'}],animals:[{n:'Zoo Santa Fe 🐒',lt:6.2981,ln:-75.5472,d:'Zoo animals!'},{n:'Mariposario 🦋',lt:6.272,ln:-75.5625,d:'Butterfly garden'},{n:'Arví Wildlife 🦜',lt:6.29,ln:-75.50,d:'Wild birds!'}],museum:[{n:'Museo de Antioquia 🎨',lt:6.2526,ln:-75.5692,d:'Art museum'},{n:'Plaza Botero 🗿',lt:6.2524,ln:-75.5684,d:'Big sculptures'},{n:'Planetario 🌟',lt:6.2707,ln:-75.5651,d:'Stars!'}]};
+const mapCats=[{k:'parks',l:'🌳 Parks'},{k:'play',l:'🎪 Play'},{k:'treats',l:'🍦 Treats'},{k:'animals',l:'🐾 Animals'},{k:'museum',l:'🏛️ Museum'}];
+let aCat='parks';
+
+function initMap(){
+    if(leafMap){leafMap.invalidateSize();return}
+    const center=userLoc||DEFAULT_LOC;
+    leafMap=L.map('leafletMap',{center,zoom:13,zoomControl:false,attributionControl:false});
+    tileL=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(leafMap);
+    satL=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18});
+    L.circleMarker(center,{radius:6,color:'#FE5000',fillColor:'#FE5000',fillOpacity:.8}).addTo(leafMap).bindPopup('📍 You are here');
+    renderChips();mapLoad('parks');
+    // Try geolocation
+    if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(pos=>{
+            userLoc=[pos.coords.latitude,pos.coords.longitude];
+            leafMap.setView(userLoc,14);
+            L.circleMarker(userLoc,{radius:7,color:'#4CAF50',fillColor:'#4CAF50',fillOpacity:.9}).addTo(leafMap).bindPopup('📍 You!');
+            $('mapInfo').textContent='Location found!';
+        },()=>{$('mapInfo').textContent='Using default location'},{enableHighAccuracy:true,timeout:8000});
+    }
+}
+function renderChips(){$('mapChips').innerHTML=mapCats.map(c=>`<span class="map-chip${c.k===aCat?' act':''}" data-k="${c.k}" onclick="mapCat(this)">${c.l}</span>`).join('')}
+function mapCat(el){aCat=el.dataset.k;renderChips();mapLoad(aCat)}
+function mapLoad(cat){
+    mapMk.forEach(m=>leafMap.removeLayer(m));mapMk=[];
+    (POI[cat]||[]).forEach(p=>{const m=L.marker([p.lt,p.ln],{icon:L.divIcon({className:'',html:`<div style="background:#FE5000;color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5)">📍</div>`,iconSize:[20,20],iconAnchor:[10,10]})}).addTo(leafMap);m.bindPopup(`<b style="font-size:10px">${p.n}</b><br><span style="font-size:9px;color:#666">${p.d}</span>`);mapMk.push(m)});
+    if(mapMk.length)leafMap.fitBounds(L.featureGroup(mapMk).getBounds().pad(.2));
+    $('mapInfo').textContent=`${mapMk.length} places`;
+}
+function mapZ(d){leafMap&&(d>0?leafMap.zoomIn():leafMap.zoomOut())}
+function toggleLyr(){if(mapSat){leafMap.removeLayer(satL);leafMap.addLayer(tileL);$('mapLyr').textContent='🛰️ Satellite';mapSat=false}else{leafMap.removeLayer(tileL);leafMap.addLayer(satL);$('mapLyr').textContent='🗺️ Street';mapSat=true}}
+function geoLocate(){
+    if(!navigator.geolocation){$('mapInfo').textContent='No GPS available';return}
+    $('mapInfo').textContent='Finding you...';
+    navigator.geolocation.getCurrentPosition(pos=>{userLoc=[pos.coords.latitude,pos.coords.longitude];leafMap.setView(userLoc,15);$('mapInfo').textContent='Found you!'},()=>{$('mapInfo').textContent='Location unavailable'},{enableHighAccuracy:true,timeout:8000})
+}
+appInit.maps=()=>{setTimeout(initMap,100)};
+
+// ═══ STORIES ═══
+// SVG scenes
+const SVG={
+night:'<rect width="220" height="88" fill="#0a0a2e"/><circle cx="170" cy="22" r="14" fill="#ffe066" opacity=".9"/><circle cx="40" cy="18" r="2" fill="#fff"/><circle cx="80" cy="13" r="1.5" fill="#fff"/><circle cx="120" cy="28" r="1" fill="#fff"/><circle cx="110" cy="55" r="10" fill="#ffe066" opacity=".6"><animate attributeName="opacity" values=".6;1;.6" dur="2s" repeatCount="indefinite"/></circle><rect x="0" y="65" width="220" height="23" fill="#1a3a1a" rx="6"/>',
+river:'<rect width="220" height="88" fill="#0a1a2e"/><path d="M0,55 Q55,38 110,58 Q165,78 220,50" fill="none" stroke="#4488cc" stroke-width="10" opacity=".5"/><circle cx="170" cy="18" r="11" fill="#ffe066" opacity=".7"/><rect x="0" y="70" width="220" height="18" fill="#1a2a1a"/>',
+forest:'<rect width="220" height="88" fill="#0a1a0a"/><polygon points="30,70 45,22 60,70" fill="#1a4a1a"/><polygon points="70,70 90,12 110,70" fill="#0d3a0d"/><polygon points="130,70 145,28 160,70" fill="#1a4a1a"/><polygon points="170,70 185,18 200,70" fill="#0d3a0d"/><rect x="0" y="70" width="220" height="18" fill="#1a2a0a"/>',
+mountain:'<rect width="220" height="88" fill="#1a1a3a"/><polygon points="50,82 110,12 170,82" fill="#2a2a4a"/><polygon points="0,82 60,28 120,82" fill="#1a1a3a" opacity=".7"/><polygon points="100,82 160,22 220,82" fill="#2a2a5a" opacity=".8"/><polygon points="95,12 110,12 115,22 108,19 100,22" fill="#fff"/>',
+dawn:'<rect width="220" height="88" fill="#1a1a3a"/><rect width="220" height="35" y="53" fill="#ff6600" opacity=".2"/><circle cx="110" cy="60" r="25" fill="#ff8800" opacity=".3"/><circle cx="110" cy="36" r="8" fill="#ffe066" opacity=".8"><animate attributeName="cy" values="36;62" dur="3s" fill="freeze"/></circle>',
+jungle:'<rect width="220" height="88" fill="#0a2a0a"/><polygon points="10,72 25,18 40,72" fill="#1a5a1a"/><polygon points="50,72 70,8 90,72" fill="#0d4a0d"/><polygon points="120,72 140,12 160,72" fill="#1a5a1a"/><polygon points="180,72 195,22 210,72" fill="#0d4a0d"/><circle cx="110" cy="48" r="16" fill="#ffe088" stroke="#aa8844" stroke-width="2"/>',
+beach:'<rect width="220" height="88" fill="#4488cc"/><rect x="0" y="55" width="220" height="33" fill="#e8d68a"/><circle cx="180" cy="22" r="18" fill="#ffe066" opacity=".8"/><path d="M0,55 Q30,50 60,57 Q90,63 120,52 Q150,47 180,57 Q210,63 220,55" fill="#66aadd" opacity=".4"/>',
+underwater:'<rect width="220" height="88" fill="#0a2a4a"/><circle cx="30" cy="28" r="3" fill="#44aaff" opacity=".3"/><circle cx="170" cy="38" r="4" fill="#44aaff" opacity=".25"/><ellipse cx="50" cy="72" rx="18" ry="7" fill="#ff6666" opacity=".5"/><ellipse cx="130" cy="76" rx="22" ry="8" fill="#ff8844" opacity=".4"/><circle cx="100" cy="32" r="4" fill="#ffaa00"/><polygon points="107,32 116,27 116,37" fill="#ffaa00"/>',
+palace:'<rect width="220" height="88" fill="#0a1a3a"/><rect x="70" y="25" width="80" height="53" fill="#4466aa" rx="4"/><polygon points="70,25 110,4 150,25" fill="#5577bb"/><rect x="95" y="50" width="30" height="28" fill="#223366" rx="3"/><circle cx="110" cy="36" r="3" fill="#ffaa00" opacity=".7"><animate attributeName="opacity" values=".7;1;.7" dur="1s" repeatCount="indefinite"/></circle>',
+savanna:'<rect width="220" height="88" fill="#cc8833"/><circle cx="180" cy="20" r="16" fill="#ffe066" opacity=".8"/><rect x="0" y="60" width="220" height="28" fill="#aa7722"/><rect x="140" y="30" width="3" height="30" fill="#5a3a1a"/><circle cx="141" cy="28" r="14" fill="#2a6a2a"/>',
+space:'<rect width="220" height="88" fill="#050510"/><circle cx="40" cy="15" r="1.5" fill="#fff"/><circle cx="90" cy="30" r="1" fill="#fff"/><circle cx="160" cy="12" r="2" fill="#fff"/><circle cx="200" cy="40" r="1" fill="#fff"/><circle cx="70" cy="55" r="1.5" fill="#fff"/><circle cx="110" cy="44" r="15" fill="#334" stroke="#556" stroke-width="1"/><ellipse cx="110" cy="44" rx="22" ry="4" fill="none" stroke="#667" stroke-width="1"/>',
+farm:'<rect width="220" height="88" fill="#88ccff"/><rect x="0" y="50" width="220" height="38" fill="#4a8a2a"/><rect x="60" y="25" width="50" height="35" fill="#aa4422" rx="2"/><polygon points="55,25 85,8 115,25" fill="#884422"/><rect x="78" y="38" width="14" height="22" fill="#663311" rx="1"/><circle cx="180" cy="20" r="14" fill="#ffe066" opacity=".8"/>',
 };
+function svgImg(k){return `<svg viewBox="0 0 220 88" xmlns="http://www.w3.org/2000/svg">${SVG[k]||SVG.night}</svg>`}
 
-// ── Storage ──
-const STORAGE_KEY = 'bunny_launcher_v1';
+// Read-aloud stories (linear pages)
+const READ_STORIES=[
+{id:'moon',icon:'🌙',title:'Moon Journey',pages:[
+{img:'night',text:'Every night, the Moon looks down at Earth and wonders what the children are doing. One night, a little moonbeam decided to visit! It slid down a silver ray of light all the way to a sleeping garden.'},
+{img:'forest',text:'The moonbeam danced between the trees, making the leaves glow silver. A family of owls watched with wide eyes. "Welcome, little light!" hooted the mother owl. "We don\'t get many visitors from the sky."'},
+{img:'river',text:'The moonbeam followed a quiet river, turning the water into a ribbon of silver. Fish leaped up to play in the sparkling light. A turtle poked its head out and smiled. "You make everything so pretty!"'},
+{img:'dawn',text:'As the sun began to rise, the moonbeam knew it was time to go home. "I\'ll be back tonight!" it whispered. And every night since, if you look carefully at the moonlight in your garden, you might see it dancing.'},
+]},
+{id:'farm_story',icon:'🐓',title:'Farm Morning',pages:[
+{img:'farm',text:'COCK-A-DOODLE-DOO! The rooster crowed at the first light of dawn. All the animals on the farm stretched and yawned. It was going to be a beautiful day! The pig rolled in her favorite mud puddle.'},
+{img:'savanna',text:'The cow walked to the meadow to eat fresh green grass for breakfast. The horse galloped around the field just for fun — her mane flying in the wind! Baby chicks followed mama hen everywhere, peeping.'},
+{img:'jungle',text:'In the garden, a sneaky rabbit was nibbling on carrots. The farmer\'s dog chased it playfully — but the rabbit was too fast! It zigzagged through the lettuce and disappeared into a little hole.'},
+{img:'farm',text:'By sunset, all the animals were sleepy and full. The pig slept in her pen, the cow lay in the barn, and the chickens roosted on their perch. The rooster whispered, "Same time tomorrow, friends!" Goodnight, farm!'},
+]},
+{id:'space_trip',icon:'🚀',title:'Space Trip',pages:[
+{img:'space',text:'3... 2... 1... BLAST OFF! The little rocket zoomed through the clouds, past the birds, past the airplanes, and into the dark sparkly sky of outer space. The stars looked like a billion tiny night-lights!'},
+{img:'space',text:'First stop: the Moon! The surface was covered in soft grey dust and the rocket left footprints everywhere. There were giant craters — like huge bowls scooped out by space rocks long, long ago.'},
+{img:'space',text:'Next: the rings of Saturn! They looked solid from far away, but up close they were billions of tiny ice chunks and rocks, all spinning together like the biggest merry-go-round ever built!'},
+{img:'dawn',text:'Time to go home! The rocket turned around and Earth appeared — a beautiful blue and green marble floating in the dark. "That\'s where everyone I love lives," the little astronaut smiled. Home sweet home!'},
+]},
+];
 
-async function saveState() {
-    const snapshot = {
-        activeApp: STATE.activeApp,
-        launcherIndex: STATE.launcherIndex,
-        appStates: STATE.appStates,
-    };
-    try {
-        if (window.creationStorage) {
-            await window.creationStorage.plain.setItem(STORAGE_KEY, btoa(JSON.stringify(snapshot)));
-        } else {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-        }
-    } catch (e) { console.warn('Save failed', e); }
+// Interactive adventures (branching)
+const ADV_STORIES=[
+{id:'lost_star',icon:'⭐',title:'Lost Star',scenes:[
+{img:'night',text:'A little star named Luna fell from the sky into a meadow. She could see her family twinkling far away. "I need to get back home!" she whispered.',acts:[{l:'Follow the river ✨',n:1},{l:'Ask the owl 🦉',n:2}]},
+{img:'river',text:'Luna rolled along a sparkling river. A friendly fish jumped up: "The Mountain of Winds can carry you back to the sky!" The path led through misty mountains.',acts:[{l:'Climb the mountain ⛰️',n:3},{l:'Keep on the river 🌊',n:4}]},
+{img:'forest',text:'A wise owl blinked down. "You need Wind Mountain. But first, shine your brightest to light the Dark Forest path." Luna took a deep breath and glowed!',acts:[{l:'Enter the forest 🌲',n:3},{l:'Wait for dawn ☀️',n:4}]},
+{img:'mountain',text:'At the mountain top, a great gust lifted Luna UP into the sky! Her family cheered. She twinkled the brightest she ever had. 🌟 THE END!',acts:[{l:'🔄 Play Again',n:-1}]},
+{img:'dawn',text:'When the sun rose, its warm rays gently lifted Luna like an elevator of light. She floated all the way home, arriving just as the sun set. Home at last! 🌟 THE END!',acts:[{l:'🔄 Play Again',n:-1}]},
+]},
+{id:'dino',icon:'🦕',title:'Dino Egg',scenes:[
+{img:'jungle',text:'You find a giant colorful egg in your backyard! It\'s warm and humming. A baby dinosaur peeks out with big curious eyes and chirps!',acts:[{l:'Feed it fruit 🍎',n:1},{l:'Build a nest 🪹',n:2}]},
+{img:'farm',text:'The dino LOVES mangoes! It gobbles them and grows bigger. Now it follows you everywhere like a puppy. Your neighbor gasps: "Is that a DINOSAUR?!"',acts:[{l:'Hide the dino 🫣',n:3},{l:'Show everyone 🎉',n:4}]},
+{img:'forest',text:'You build a cozy nest with blankets and leaves. The dino curls up happily, but soon it\'s too big! It knocks over the garden fence trying to stretch.',acts:[{l:'Take it to the park 🌳',n:4},{l:'Build bigger home 🏗️',n:3}]},
+{img:'mountain',text:'You and your dino find a secret hill spot. Other kids bring food and start a Dino Club! Everyone has the best summer ever. 🦕 THE END!',acts:[{l:'🔄 Play Again',n:-1}]},
+{img:'savanna',text:'The whole town sees your dino! The mayor declares "Dino Day" — there\'s a parade. Your dino wears a flower crown and dances. Best day EVER! 🦕 THE END!',acts:[{l:'🔄 Play Again',n:-1}]},
+]},
+];
+
+let stMode='read',stReadIdx=0,stReadPage=0,stAdvIdx=0,stAdvScene=0;
+
+function stTab(mode){
+    stMode=mode;
+    $('tabRead').classList.toggle('act',mode==='read');$('tabAdv').classList.toggle('act',mode==='adv');
+    $('stReadPanel').style.display=mode==='read'?'':'none';
+    $('stAdvPanel').style.display=mode==='adv'?'':'none';
+    mode==='read'?renderRead():renderAdv();
 }
-
-async function loadState() {
-    try {
-        let raw;
-        if (window.creationStorage) {
-            const stored = await window.creationStorage.plain.getItem(STORAGE_KEY);
-            if (stored) raw = JSON.parse(atob(stored));
-        } else {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) raw = JSON.parse(stored);
-        }
-        if (raw) {
-            STATE.activeApp = raw.activeApp || null;
-            STATE.launcherIndex = raw.launcherIndex || 0;
-            STATE.appStates = raw.appStates || {};
-        }
-    } catch (e) { console.warn('Load failed', e); }
+// READ ALOUD
+function renderRead(){
+    const p=$('stReadPanel');const stories=READ_STORIES;
+    const s=stories[stReadIdx];const pg=s.pages[stReadPage];
+    p.innerHTML=`<div class="st-pick">${stories.map((st,i)=>`<span class="st-pc${i===stReadIdx?' act':''}" onclick="pickRead(${i})">${st.icon} ${st.title}</span>`).join('')}</div>
+    <div class="st-img">${svgImg(pg.img)}</div>
+    <div class="st-text">${pg.text}</div>
+    <div class="st-acts">
+    ${stReadPage>0?'<button class="st-btn sec" onclick="readNav(-1)">◀ Back</button>':''}
+    <button class="st-btn pri" onclick="readAloud()">🔊 Read</button>
+    ${stReadPage<s.pages.length-1?'<button class="st-btn sec" onclick="readNav(1)">Next ▶</button>':'<button class="st-btn sec" onclick="readNav(0)">🔄 Start</button>'}
+    </div>`;
 }
+function pickRead(i){stReadIdx=i;stReadPage=0;renderRead()}
+function readNav(d){if(d===0)stReadPage=0;else stReadPage=Math.max(0,Math.min(READ_STORIES[stReadIdx].pages.length-1,stReadPage+d));renderRead()}
+function readAloud(){const pg=READ_STORIES[stReadIdx].pages[stReadPage];askLLM(`Read this aloud warmly for a child at bedtime. Just read the text exactly, in a gentle voice: "${pg.text}"`,true)}
 
-// ── Visibility API (screen sleep/wake) ──
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        saveState();
-    } else {
-        updateClock();
-    }
-});
-
-// ── Clock ──
-function updateClock() {
-    const now = new Date();
-    const h = String(now.getHours()).padStart(2, '0');
-    const m = String(now.getMinutes()).padStart(2, '0');
-    document.getElementById('clock').textContent = `${h}:${m}`;
+// ADVENTURES
+function renderAdv(){
+    const p=$('stAdvPanel');const stories=ADV_STORIES;
+    const s=stories[stAdvIdx];const sc=s.scenes[stAdvScene];
+    p.innerHTML=`<div class="st-pick">${stories.map((st,i)=>`<span class="st-pc${i===stAdvIdx?' act':''}" onclick="pickAdv(${i})">${st.icon} ${st.title}</span>`).join('')}</div>
+    <div class="st-img">${svgImg(sc.img)}</div>
+    <div class="st-text">${sc.text}</div>
+    <div class="st-acts">${sc.acts.map(a=>`<button class="st-btn ${a===sc.acts[0]?'pri':'sec'}" onclick="advChoice(${a.n})">${a.l}</button>`).join('')}</div>`;
 }
-setInterval(updateClock, 15000);
+function pickAdv(i){stAdvIdx=i;stAdvScene=0;renderAdv()}
+function advChoice(n){if(n===-1)stAdvScene=0;else stAdvScene=n;renderAdv()}
+appInit.stories=()=>{stMode='read';stReadPage=0;stTab('read')};
 
-// ── Flash effect ──
-function flash(color) {
-    const shell = document.getElementById('shell');
-    shell.style.setProperty('--flash-color', color);
-    shell.classList.remove('flash');
-    void shell.offsetWidth;
-    shell.classList.add('flash');
+// ═══ MYSTERY ═══
+const MY={t:'The Missing Cookies',sc:[
+{img:'kitchen',text:'Oh no! Grandma\'s cookies have disappeared! Crumbs on the floor lead three directions. You grab your magnifying glass. Let\'s investigate!',clue:null,ch:[{l:'🌳 Check the garden',n:1},{l:'🛋️ Check living room',n:2},{l:'🏠 Check garage',n:3}]},
+{img:'garden_clue',text:'Chocolate pawprints by a hole in the fence! A blue feather in a bush. The neighbor\'s cat is sleeping nearby, looking innocent...',clue:'🐾 Pawprints',ch:[{l:'🐾 Follow pawprints',n:4},{l:'🔙 Go back',n:0}]},
+{img:'living',text:'Crumbs lead to the couch. Under the cushion: an empty plate! A sticky note says "I.O.U - sorry!" in messy handwriting.',clue:'📝 IOU note',ch:[{l:'🚪 Check whose writing',n:5},{l:'🔙 Go back',n:0}]},
+{img:'garage',text:'A jar of crumbs on the workbench. A walkie-talkie is ON — you hear someone giggling on the other end!',clue:'📻 Walkie-talkie',ch:[{l:'🎤 Talk into it',n:6},{l:'🔙 Go back',n:0}]},
+{img:'fence',text:'Pawprints lead to raccoons having their OWN cookie party! But these are different cookies. Grandma\'s aren\'t here — the raccoons are innocent!',clue:'🦝 Raccoons innocent',ch:[{l:'🔙 Keep looking',n:0}]},
+{img:'bedroom',text:'Your sister\'s room — chocolate on her homework. She says: "I took ONE before they vanished! Check Tommy\'s treehouse!"',clue:'🍫 Sister took one',ch:[{l:'🌳 Treehouse!',n:7},{l:'🔙 Go back',n:0}]},
+{img:'walkie',text:'"Hehe... operation cookie rescue is complete!" That\'s Tommy! "Meet me at the treehouse," he whispers.',clue:'🧒 Tommy\'s voice',ch:[{l:'🌳 Treehouse!',n:7}]},
+{img:'treehouse',text:'Tommy and friends are having a cookie tea party with ALL of Grandma\'s cookies! Tommy looks guilty. "I was going to share..."',clue:null,ch:[{l:'✅ Case solved!',n:8}]},
+{img:'party',text:null,end:true},
+]};
+const MySVG={kitchen:'<rect width="220" height="72" fill="#2a1a0a"/><rect x="10" y="30" width="70" height="36" fill="#4a3020" rx="3"/><circle cx="40" cy="38" r="5" fill="#cc8844"/><circle cx="55" cy="40" r="4" fill="#cc8844"/><rect x="130" y="25" width="60" height="41" fill="#3a2a1a" rx="3"/><circle cx="140" cy="58" r="2" fill="#cc8844"/><circle cx="155" cy="60" r="1.5" fill="#cc8844"/>',garden_clue:'<rect width="220" height="72" fill="#1a3a1a"/><rect x="0" y="50" width="220" height="22" fill="#2a4a2a"/><circle cx="150" cy="54" r="3" fill="#6B3A1F"/><circle cx="135" cy="56" r="2.5" fill="#6B3A1F"/><circle cx="120" cy="55" r="2" fill="#6B3A1F"/>',living:'<rect width="220" height="72" fill="#2a2020"/><rect x="30" y="25" width="160" height="38" fill="#4a3030" rx="4"/><rect x="40" y="30" width="140" height="12" fill="#5a4040" rx="2"/><rect x="90" y="43" width="30" height="4" fill="#fff" opacity=".3"/>',garage:'<rect width="220" height="72" fill="#1a1a1a"/><rect x="20" y="22" width="70" height="32" fill="#333" rx="2"/><circle cx="160" cy="38" r="10" fill="#444"/><circle cx="160" cy="38" r="3" fill="#ff4444" opacity=".6"><animate attributeName="opacity" values=".6;1;.6" dur="1s" repeatCount="indefinite"/></circle>',fence:'<rect width="220" height="72" fill="#1a2a1a"/><rect x="0" y="40" width="220" height="32" fill="#2a3a2a"/><line x1="0" y1="32" x2="220" y2="32" stroke="#8B6914" stroke-width="3"/><circle cx="130" cy="48" r="8" fill="#888"/><circle cx="145" cy="46" r="6" fill="#777"/>',bedroom:'<rect width="220" height="72" fill="#2a1a2a"/><rect x="40" y="22" width="70" height="38" fill="#4a3050" rx="3"/><rect x="130" y="30" width="45" height="28" fill="#3a2040" rx="2"/>',walkie:'<rect width="220" height="72" fill="#1a1a2a"/><rect x="80" y="12" width="55" height="46" fill="#444" rx="4"/><rect x="90" y="22" width="35" height="16" fill="#222" rx="2"/><circle cx="107" cy="48" r="5" fill="#ff4444" opacity=".7"><animate attributeName="opacity" values=".7;1;.7" dur=".5s" repeatCount="indefinite"/></circle>',treehouse:'<rect width="220" height="72" fill="#0a2a0a"/><rect x="95" y="5" width="25" height="52" fill="#8B6914"/><rect x="62" y="5" width="90" height="32" fill="#6B5410" rx="3"/><polygon points="62,5 107,-10 152,5" fill="#5a4a0a"/><rect x="88" y="22" width="18" height="15" fill="#4a3a0a" rx="2"/>',party:'<rect width="220" height="72" fill="#2a2a0a"/><rect x="50" y="38" width="120" height="24" fill="#5a4a2a" rx="3"/><circle cx="80" cy="42" r="5" fill="#cc8844"/><circle cx="100" cy="40" r="4" fill="#cc8844"/><circle cx="120" cy="43" r="5" fill="#cc8844"/><text x="110" y="24" text-anchor="middle" fill="#ffe066" font-size="12" font-weight="700">🎉 SOLVED!</text>'};
+function mySvg(k){return `<svg viewBox="0 0 220 72" xmlns="http://www.w3.org/2000/svg">${MySVG[k]||MySVG.kitchen}</svg>`}
+
+let myS=0,myC=[];
+function renderMy(){
+    const s=MY.sc[myS];
+    if(s.end){$('myBody').innerHTML=`<div class="my-scene">${mySvg('party')}</div><div class="my-end"><div class="big">🕵️</div><div class="msg">Case Closed!</div><div class="det">Tommy took the cookies for a tea party with friends!</div><div class="clue-list">Clues: ${myC.join(' ')}</div><button class="my-restart" onclick="myReset()">🔄 New Case!</button></div>`;return}
+    if(s.clue&&!myC.includes(s.clue))myC.push(s.clue);
+    let clH=myC.length?`<div class="my-clues">🔍 ${myC.join(' ')}</div>`:'';
+    $('myBody').innerHTML=`<div class="my-scene">${mySvg(s.img)}</div>${clH}<div class="my-text">${s.text}</div><div class="my-choices">${s.ch.map(c=>`<div class="my-choice" onclick="myPick(${c.n})">${c.l}</div>`).join('')}</div>`;
 }
+function myPick(n){myS=n;renderMy()}
+function myReset(){myS=0;myC=[];renderMy()}
+appInit.mystery=()=>{myS=0;myC=[];renderMy()};
 
-// ── LLM Bridge ──
-function askLLM(message, wantsVoice = true) {
-    if (window.PluginMessageHandler) {
-        PluginMessageHandler.postMessage(JSON.stringify({
-            message: message,
-            useLLM: true,
-            wantsR1Response: wantsVoice
-        }));
-    } else {
-        console.log('[LLM Mock]', message);
-        // Simulate response for desktop testing
-        setTimeout(() => {
-            if (window.onPluginMessage) {
-                window.onPluginMessage({
-                    message: `[Mock] Response to: ${message.substring(0, 50)}...`,
-                    data: null
-                });
-            }
-        }, 500);
-    }
-}
-
-// ── LLM Response handler ──
-window.onPluginMessage = function(data) {
-    const msg = data.data || data.message || '';
-    if (STATE.activeApp && APP_REGISTRY[STATE.activeApp] && APP_REGISTRY[STATE.activeApp].onLLMResponse) {
-        APP_REGISTRY[STATE.activeApp].onLLMResponse(msg);
-    }
-};
-
-// ═══════════════════════════════════════════
-//  APP REGISTRY — each app is a module
-// ═══════════════════════════════════════════
-
-const APP_REGISTRY = {};
-
-function registerApp(key, config) {
-    APP_REGISTRY[key] = {
-        key,
-        name: config.name,
-        icon: config.icon,
-        iconBg: config.iconBg || '#222',
-        desc: config.desc,
-        onEnter: config.onEnter || (() => {}),
-        onExit: config.onExit || (() => {}),
-        onScroll: config.onScroll || (() => {}),
-        onSideClick: config.onSideClick || (() => {}),
-        onLLMResponse: config.onLLMResponse || null,
-    };
-}
-
-// ── Screen management ──
-function showScreen(id) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    const el = document.getElementById(id);
-    if (el) el.classList.add('active');
-}
-
-function enterApp(key) {
-    if (!APP_REGISTRY[key]) return;
-    STATE.activeApp = key;
-    document.getElementById('appLabel').textContent = APP_REGISTRY[key].name;
-    showScreen('app-' + key);
-    APP_REGISTRY[key].onEnter(STATE.appStates[key] || {});
-    saveState();
-}
-
-function exitToLauncher() {
-    if (STATE.activeApp && APP_REGISTRY[STATE.activeApp]) {
-        APP_REGISTRY[STATE.activeApp].onExit();
-    }
-    STATE.activeApp = null;
-    document.getElementById('appLabel').textContent = 'BunnyLauncher';
-    showScreen('launcherScreen');
-    renderLauncher();
-    saveState();
-    flash('#FE5000');
-}
-
-// ── Launcher rendering ──
-function renderLauncher() {
-    const list = document.getElementById('appList');
-    const keys = Object.keys(APP_REGISTRY);
-    if (STATE.launcherIndex >= keys.length) STATE.launcherIndex = 0;
-    list.innerHTML = keys.map((k, i) => {
-        const app = APP_REGISTRY[k];
-        const sel = i === STATE.launcherIndex ? 'selected' : '';
-        return `<div class="app-item ${sel}" data-key="${k}">
-            <div class="app-icon" style="background:${app.iconBg}">${app.icon}</div>
-            <div class="app-meta">
-                <div class="app-name">${app.name}</div>
-                <div class="app-desc">${app.desc}</div>
-            </div>
-        </div>`;
-    }).join('');
-}
-
-// ═══════════════════════════════════════════
-//  EVENT ROUTING
-// ═══════════════════════════════════════════
-
-// -- Side click (single/double) --
-let lastClick = 0, clickTimer = null;
-const DBL_THRESHOLD = 300;
-
-function handleSideClickEvent() {
-    const now = Date.now();
-    if (now - lastClick < DBL_THRESHOLD) {
-        clearTimeout(clickTimer);
-        lastClick = 0;
-        // Double click — reserved (unused for now)
-    } else {
-        lastClick = now;
-        clickTimer = setTimeout(() => routeSingleClick(), DBL_THRESHOLD);
-    }
-    window.focus();
-}
-
-function routeSingleClick() {
-    if (!STATE.activeApp) {
-        // In launcher — enter selected app
-        const keys = Object.keys(APP_REGISTRY);
-        if (keys.length > 0) {
-            enterApp(keys[STATE.launcherIndex]);
-        }
-    } else if (APP_REGISTRY[STATE.activeApp]) {
-        APP_REGISTRY[STATE.activeApp].onSideClick();
-    }
-    flash('#4CAF50');
-}
-
-// -- Scroll --
-function handleScrollUp() {
-    if (!STATE.activeApp) {
-        const keys = Object.keys(APP_REGISTRY);
-        STATE.launcherIndex = Math.max(0, STATE.launcherIndex - 1);
-        renderLauncher();
-    } else if (APP_REGISTRY[STATE.activeApp]) {
-        APP_REGISTRY[STATE.activeApp].onScroll('up');
-    }
-    saveState();
-}
-
-function handleScrollDown() {
-    if (!STATE.activeApp) {
-        const keys = Object.keys(APP_REGISTRY);
-        STATE.launcherIndex = Math.min(keys.length - 1, STATE.launcherIndex + 1);
-        renderLauncher();
-    } else if (APP_REGISTRY[STATE.activeApp]) {
-        APP_REGISTRY[STATE.activeApp].onScroll('down');
-    }
-    saveState();
-}
-
-// -- Long press = back to launcher --
-let longPressActive = false;
-function handleLongPressStart() {
-    longPressActive = true;
-}
-function handleLongPressEnd() {
-    if (longPressActive && STATE.activeApp) {
-        exitToLauncher();
-    }
-    longPressActive = false;
-}
-
-// ── R1 Hardware Events ──
-window.addEventListener('sideClick', () => { try { handleSideClickEvent(); } catch(e) { console.error(e); } });
-window.addEventListener('scrollUp', () => { try { handleScrollUp(); } catch(e) { console.error(e); } });
-window.addEventListener('scrollDown', () => { try { handleScrollDown(); } catch(e) { console.error(e); } });
-window.addEventListener('longPressStart', () => { try { handleLongPressStart(); } catch(e) { console.error(e); } });
-window.addEventListener('longPressEnd', () => { try { handleLongPressEnd(); } catch(e) { console.error(e); } });
-
-// ── Keyboard fallback for desktop testing ──
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowUp') handleScrollUp();
-    else if (e.key === 'ArrowDown') handleScrollDown();
-    else if (e.key === 'Enter' || e.key === ' ') handleSideClickEvent();
-    else if (e.key === 'Escape') exitToLauncher();
-});
-
-// ═══════════════════════════════════════════
-//  APP: ANIMAL ENCYCLOPEDIA
-// ═══════════════════════════════════════════
-
-(function() {
-    const animals = [
-        { emoji: '🐘', name: 'Elephant', fact: 'Elephants can recognize themselves in mirrors and mourn their dead relatives.' },
-        { emoji: '🦁', name: 'Lion', fact: 'A lion\'s roar can be heard from 8 kilometers away!' },
-        { emoji: '🐙', name: 'Octopus', fact: 'Octopuses have three hearts and blue blood. Each arm can taste and think on its own.' },
-        { emoji: '🦅', name: 'Eagle', fact: 'Eagles can see fish swimming from over 1 km above. Their eyes are 8x sharper than ours.' },
-        { emoji: '🐬', name: 'Dolphin', fact: 'Dolphins sleep with one eye open — literally! Half their brain stays awake.' },
-        { emoji: '🐢', name: 'Turtle', fact: 'Sea turtles have been around for 110 million years — they outlived the dinosaurs!' },
-        { emoji: '🦜', name: 'Parrot', fact: 'African Grey parrots can learn over 1,000 words and understand concepts like color and shape.' },
-        { emoji: '🐺', name: 'Wolf', fact: 'Wolves can travel 50 km in a single day and communicate with howls over 16 km.' },
-        { emoji: '🐝', name: 'Bee', fact: 'A single bee visits up to 5,000 flowers per day and dances to tell friends where food is.' },
-        { emoji: '🦈', name: 'Shark', fact: 'Sharks can detect a single drop of blood in an Olympic swimming pool.' },
-        { emoji: '🐸', name: 'Frog', fact: 'Some frogs can freeze solid in winter and thaw back to life in spring!' },
-        { emoji: '🦉', name: 'Owl', fact: 'Owls can rotate their heads 270° because they can\'t move their eyeballs.' },
-        { emoji: '🐋', name: 'Whale', fact: 'Blue whale hearts are the size of a small car and beat loud enough to be detected 3 km away.' },
-        { emoji: '🦎', name: 'Chameleon', fact: 'Chameleons don\'t change color for camouflage — they do it to communicate mood and temperature.' },
-        { emoji: '🐊', name: 'Crocodile', fact: 'Crocodiles have barely changed in 200 million years. They\'re living dinosaurs.' },
-    ];
-
-    let idx = 0;
-
-    function render() {
-        const a = animals[idx];
-        document.getElementById('animalEmoji').textContent = a.emoji;
-        document.getElementById('animalName').textContent = a.name;
-        document.getElementById('animalFact').textContent = a.fact;
-    }
-
-    registerApp('animals', {
-        name: 'Animals',
-        icon: '🦁',
-        iconBg: '#2a1a00',
-        desc: 'Discover amazing creatures',
-        onEnter: (saved) => {
-            idx = saved.idx || 0;
-            render();
-        },
-        onExit: () => {
-            STATE.appStates.animals = { idx };
-        },
-        onScroll: (dir) => {
-            idx = dir === 'up'
-                ? (idx - 1 + animals.length) % animals.length
-                : (idx + 1) % animals.length;
-            render();
-            STATE.appStates.animals = { idx };
-        },
-        onSideClick: () => {
-            // Ask LLM for more about this animal
-            const a = animals[idx];
-            askLLM(`Tell me a fun and amazing fact about ${a.name} for a young child. Keep it to 2 sentences.`, true);
-            document.getElementById('animalFact').textContent = 'Asking...';
-        },
-        onLLMResponse: (msg) => {
-            document.getElementById('animalFact').textContent = msg.substring(0, 200);
-        }
-    });
-})();
-
-// ═══════════════════════════════════════════
-//  APP: MATH QUEST
-// ═══════════════════════════════════════════
-
-(function() {
-    let score = 0, streak = 0, level = 1;
-    let problem = null, selectedOption = 0, answered = false;
-    let options = [];
-
-    function genProblem() {
-        answered = false;
-        selectedOption = 0;
-        let a, b, op, answer;
-        if (level <= 2) {
-            a = Math.floor(Math.random() * (level * 5)) + 1;
-            b = Math.floor(Math.random() * (level * 5)) + 1;
-            op = '+';
-            answer = a + b;
-        } else if (level <= 4) {
-            a = Math.floor(Math.random() * 12) + 1;
-            b = Math.floor(Math.random() * Math.min(a, 10)) + 1;
-            op = Math.random() > 0.5 ? '+' : '−';
-            answer = op === '+' ? a + b : a - b;
-        } else {
-            a = Math.floor(Math.random() * 10) + 1;
-            b = Math.floor(Math.random() * 10) + 1;
-            op = '×';
-            answer = a * b;
-        }
-        // Generate 4 options with one correct
-        const opts = new Set([answer]);
-        while (opts.size < 4) {
-            const offset = Math.floor(Math.random() * 10) - 5;
-            const wrong = answer + (offset === 0 ? 1 : offset);
-            if (wrong >= 0) opts.add(wrong);
-        }
-        options = [...opts].sort((a, b) => a - b);
-        problem = { a, b, op, answer, options };
-        render();
-    }
-
-    function render() {
-        document.getElementById('mathLevel').textContent = `Level ${level}`;
-        document.getElementById('mathEquation').textContent = `${problem.a} ${problem.op} ${problem.b} = ?`;
-        document.getElementById('mathAnswers').innerHTML = options.map((opt, i) => {
-            let cls = 'math-option';
-            if (i === selectedOption && !answered) cls += ' selected';
-            if (answered && opt === problem.answer) cls += ' correct';
-            if (answered && i === selectedOption && opt !== problem.answer) cls += ' wrong';
-            return `<span class="${cls}">${opt}</span>`;
-        }).join('');
-        document.getElementById('mathScore').textContent = `Score: ${score} | Streak: ${streak}`;
-        if (!answered) {
-            document.getElementById('mathFeedback').textContent = '';
-        }
-    }
-
-    registerApp('math', {
-        name: 'MathQuest',
-        icon: '🔢',
-        iconBg: '#0a1a2e',
-        desc: 'Practice math, earn streaks!',
-        onEnter: (saved) => {
-            score = saved.score || 0;
-            streak = saved.streak || 0;
-            level = saved.level || 1;
-            genProblem();
-        },
-        onExit: () => {
-            STATE.appStates.math = { score, streak, level };
-        },
-        onScroll: (dir) => {
-            if (answered) return;
-            selectedOption = dir === 'up'
-                ? Math.max(0, selectedOption - 1)
-                : Math.min(options.length - 1, selectedOption + 1);
-            render();
-        },
-        onSideClick: () => {
-            if (answered) {
-                genProblem();
-                return;
-            }
-            answered = true;
-            if (options[selectedOption] === problem.answer) {
-                score += level * 10;
-                streak++;
-                if (streak > 0 && streak % 5 === 0) level = Math.min(level + 1, 6);
-                document.getElementById('mathFeedback').textContent = '✅ Correct!';
-                flash('#4CAF50');
-            } else {
-                streak = 0;
-                document.getElementById('mathFeedback').textContent = `❌ It was ${problem.answer}`;
-                flash('#f44336');
-            }
-            render();
-            STATE.appStates.math = { score, streak, level };
-            saveState();
-        }
-    });
-})();
-
-// ═══════════════════════════════════════════
-//  APP: QUESTION BOX
-// ═══════════════════════════════════════════
-
-(function() {
-    const questions = [
-        "Why is the sky blue?",
-        "How do volcanoes erupt?",
-        "Why do we dream?",
-        "How do airplanes fly?",
-        "Why is the ocean salty?",
-        "What makes thunder?",
-        "How do plants eat?",
-        "Why do stars twinkle?",
-        "What are clouds made of?",
-        "How does a rainbow form?",
-        "Why do leaves change color?",
-        "How do magnets work?",
-        "What causes earthquakes?",
-        "Why do cats purr?",
-        "How does the moon glow?",
-    ];
-    let idx = 0;
-
-    registerApp('questions', {
-        name: 'QuestionBox',
-        icon: '❓',
-        iconBg: '#1a0a2e',
-        desc: 'Ask anything, learn everything',
-        onEnter: (saved) => {
-            idx = saved.idx || 0;
-            document.getElementById('questionText').textContent = questions[idx];
-            document.getElementById('questionAnswer').textContent = '';
-            document.getElementById('questionHint').textContent = 'CLICK to ask • SCROLL for more';
-        },
-        onExit: () => { STATE.appStates.questions = { idx }; },
-        onScroll: (dir) => {
-            idx = dir === 'up'
-                ? (idx - 1 + questions.length) % questions.length
-                : (idx + 1) % questions.length;
-            document.getElementById('questionText').textContent = questions[idx];
-            document.getElementById('questionAnswer').textContent = '';
-            document.getElementById('questionHint').textContent = 'CLICK to ask • SCROLL for more';
-        },
-        onSideClick: () => {
-            askLLM(`Answer this question for a curious child in 3 simple sentences: ${questions[idx]}`, true);
-            document.getElementById('questionAnswer').textContent = 'Thinking...';
-            document.getElementById('questionHint').textContent = '🔊 Listening...';
-        },
-        onLLMResponse: (msg) => {
-            document.getElementById('questionAnswer').textContent = msg.substring(0, 250);
-            document.getElementById('questionHint').textContent = 'SCROLL → next question';
-        }
-    });
-})();
-
-// ═══════════════════════════════════════════
-//  APP: EXPLORER (Maps / Location)
-// ═══════════════════════════════════════════
-
-(function() {
-    const topics = ['🏔️ Nature nearby', '🏛️ Interesting places', '🍽️ Local food', '🎭 Fun things to do'];
-    let topicIdx = 0;
-
-    registerApp('maps', {
-        name: 'Explorer',
-        icon: '🗺️',
-        iconBg: '#0a2a1a',
-        desc: 'Discover the world around you',
-        onEnter: (saved) => {
-            topicIdx = saved.topicIdx || 0;
-            document.getElementById('mapsPrompt').style.display = '';
-            document.getElementById('mapsResult').style.display = 'none';
-            document.getElementById('mapsStatus').textContent = topics[topicIdx];
-        },
-        onExit: () => { STATE.appStates.maps = { topicIdx }; },
-        onScroll: (dir) => {
-            topicIdx = dir === 'up'
-                ? (topicIdx - 1 + topics.length) % topics.length
-                : (topicIdx + 1) % topics.length;
-            document.getElementById('mapsStatus').textContent = topics[topicIdx];
-        },
-        onSideClick: () => {
-            const topic = topics[topicIdx];
-            askLLM(`I'm a child exploring with my dad near Medellín, Colombia. Tell me about ${topic} in 4 short, fun sentences a kid would love. Include one specific place name.`, true);
-            document.getElementById('mapsPrompt').style.display = 'none';
-            document.getElementById('mapsResult').style.display = '';
-            document.getElementById('mapsResult').textContent = 'Exploring...';
-            document.getElementById('mapsStatus').textContent = '🔍 Searching...';
-        },
-        onLLMResponse: (msg) => {
-            document.getElementById('mapsResult').textContent = msg.substring(0, 300);
-            document.getElementById('mapsStatus').textContent = topics[topicIdx] + ' ✓';
-        }
-    });
-})();
-
-// ═══════════════════════════════════════════
-//  APP: STORY TIME (Interactive stories)
-// ═══════════════════════════════════════════
-
-(function() {
-    const themes = ['🏰 Castle adventure', '🚀 Space journey', '🌊 Ocean mystery', '🌳 Forest quest', '🦕 Dinosaur time'];
-    let themeIdx = 0;
-    let storyStarted = false;
-
-    registerApp('stories', {
-        name: 'StoryTime',
-        icon: '📖',
-        iconBg: '#2a0a1a',
-        desc: 'AI tells you an adventure!',
-        onEnter: (saved) => {
-            themeIdx = saved.themeIdx || 0;
-            storyStarted = false;
-            document.getElementById('storyIcon').textContent = themes[themeIdx].split(' ')[0];
-            document.getElementById('storyTitle').textContent = themes[themeIdx];
-            document.getElementById('storyText').innerHTML =
-                'CLICK to start a new story.<br>SCROLL to pick a theme.';
-        },
-        onExit: () => {
-            STATE.appStates.stories = { themeIdx };
-        },
-        onScroll: (dir) => {
-            if (!storyStarted) {
-                themeIdx = dir === 'up'
-                    ? (themeIdx - 1 + themes.length) % themes.length
-                    : (themeIdx + 1) % themes.length;
-                document.getElementById('storyIcon').textContent = themes[themeIdx].split(' ')[0];
-                document.getElementById('storyTitle').textContent = themes[themeIdx];
-            }
-        },
-        onSideClick: () => {
-            const theme = themes[themeIdx];
-            if (!storyStarted) {
-                storyStarted = true;
-                askLLM(`Start a short interactive story for a young child about a "${theme}". Write 3 exciting sentences, then end with "What do you do?" and give 2 choices. Keep it fun and age-appropriate.`, true);
-                document.getElementById('storyText').textContent = 'Once upon a time...';
-                document.getElementById('storyTitle').textContent = '✨ ' + theme;
-            } else {
-                askLLM(`Continue the ${theme} story for a child. Write 3 more exciting sentences and give 2 new choices. Keep it fun.`, true);
-                document.getElementById('storyText').textContent = 'And then...';
-            }
-        },
-        onLLMResponse: (msg) => {
-            document.getElementById('storyText').textContent = msg.substring(0, 350);
-        }
-    });
-})();
-
-
-// ═══════════════════════════════════════════
-//  BOOT SEQUENCE
-// ═══════════════════════════════════════════
-
-window.addEventListener('load', async () => {
-    updateClock();
-    await loadState();
-    if (STATE.activeApp && APP_REGISTRY[STATE.activeApp]) {
-        enterApp(STATE.activeApp);
-    } else {
-        renderLauncher();
-    }
-});
-
+// ═══ BOOT ═══
+window.addEventListener('load',async()=>{await load();renderLauncher();if(ST.activeApp&&appInit[ST.activeApp])launch(ST.activeApp)});
 </script>
-</body>
-</html>
-
-
 </body>
 </html>
