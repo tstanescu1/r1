@@ -1,46 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=240, height=282, initial-scale=1.0">
     <style>
-        body, html { width: 240px; height: 282px; margin: 0; background: #000; color: #fff; overflow: hidden; }
-        #app { width: 240px; height: 282px; border: 5px solid #FE5000; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        body, html { 
+            width: 240px; height: 282px; 
+            margin: 0; padding: 0; 
+            background: #000; color: #fff; 
+            overflow: hidden; font-family: sans-serif;
+            box-sizing: border-box;
+        }
+        #app { 
+            width: 240px; height: 282px; 
+            border: 5px solid #FE5000; 
+            box-sizing: border-box; 
+            display: flex; flex-direction: column; 
+            align-items: center; justify-content: center;
+        }
+        button { 
+            width: 120px; height: 40px; 
+            margin: 10px; cursor: pointer; 
+            z-index: 10; 
+        }
+        #status { font-size: 14px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
-<div id="app">
-    <h3 id="status">Ready</h3>
-    <button onclick="speakTest()">Test Voice</button>
-</div>
+    <div id="app">
+        <h3 id="status">Ready</h3>
+        <button id="voiceBtn" onclick="speakTest()">Say Hello</button>
+    </div>
 
 <script>
-    // --- BUTTON LOGIC (Manual Debounce) ---
+    // --- 1. HARDWARE BUTTON LOGIC ---
     let clickCount = 0;
     let pressTimer = null;
     let startTime = 0;
 
-    // Use 'mousedown'/'mouseup' to track hardware button state
-    // Note: If 'sideClick' isn't firing, attach these to 'window'
-    window.addEventListener('mousedown', () => {
+    // Use window-level listeners to catch physical interaction
+    window.addEventListener('mousedown', (e) => {
+        if (e.target.tagName === 'BUTTON') return; // Ignore on-screen UI taps
         startTime = Date.now();
-        pressTimer = setTimeout(() => {
-            handleLongPress();
-        }, 800); // 800ms hold = Long Press
+        pressTimer = setTimeout(() => handleLongPress(), 800);
     });
 
-    window.addEventListener('mouseup', () => {
+    window.addEventListener('mouseup', (e) => {
+        if (e.target.tagName === 'BUTTON') return; // Ignore on-screen UI taps
         clearTimeout(pressTimer);
         let duration = Date.now() - startTime;
 
-        if (duration < 500) { // It's a click
+        if (duration < 500) { 
             clickCount++;
             setTimeout(() => {
                 if (clickCount === 1) handleSingleClick();
                 else if (clickCount === 2) handleDoubleClick();
                 clickCount = 0;
-            }, 300); // Wait 300ms to see if another click comes
+            }, 300);
         }
     });
 
+    // --- 2. HARDWARE ACTIONS ---
     function handleSingleClick() {
         document.getElementById('status').innerText = "Single Click!";
         document.getElementById('app').style.borderColor = "blue";
@@ -56,20 +76,28 @@
         document.getElementById('app').style.borderColor = "green";
     }
 
-    // --- AUDIO FIX ---
+    // --- 3. SCROLL WHEEL (Native Browser Listener) ---
+    window.addEventListener('wheel', (e) => {
+        document.getElementById('status').innerText = "Scrolling: " + (e.deltaY > 0 ? "Down" : "Up");
+        document.getElementById('app').style.borderColor = "#FFD700"; // Gold on scroll
+    }, { passive: false });
+
+    // --- 4. R1 SDK BRIDGE ---
     function speakTest() {
         document.getElementById('status').innerText = "Speaking...";
-        PluginMessageHandler.postMessage(JSON.stringify({
-            message: "Hello! If you can hear this, the audio bridge is working.",
-            useLLM: true,
-            wantsR1Response: true 
-        }));
+        if(window.PluginMessageHandler) {
+            PluginMessageHandler.postMessage(JSON.stringify({
+                message: "Hello! The audio bridge is working.",
+                useLLM: true,
+                wantsR1Response: true 
+            }));
+        } else {
+            document.getElementById('status').innerText = "Bridge not found";
+        }
     }
 
-    // Listen for bridge messages
     window.onPluginMessage = function(data) {
-        console.log("Bridge Received:", data);
-        // Sometimes the SDK needs a specific acknowledgement
+        console.log("R1 Message:", data);
     };
 </script>
 </body>
