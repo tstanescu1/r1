@@ -4,16 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=240, height=282, initial-scale=1.0">
     <style>
-        body, html { 
-            width: 240px; height: 282px; margin: 0; padding: 0; 
-            background: #000; color: #fff; font-family: sans-serif;
-            overflow: hidden; box-sizing: border-box;
-        }
-        #app { 
-            width: 240px; height: 282px; border: 5px solid #FE5000; 
-            box-sizing: border-box; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center;
-        }
+        body, html { width: 240px; height: 282px; margin: 0; padding: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; box-sizing: border-box; }
+        #app { width: 240px; height: 282px; border: 5px solid #FE5000; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         #status { font-size: 14px; margin-bottom: 10px; text-align: center; }
         button { width: 120px; height: 40px; margin: 10px; cursor: pointer; z-index: 10; }
     </style>
@@ -25,56 +17,74 @@
     </div>
 
 <script>
-    // --- 1. SDK EVENT LISTENERS (From your Implementation Plan) ---
+    // --- 1. SDK EVENT LISTENERS ---
     window.addEventListener('scrollUp', handleScrollUp);
     window.addEventListener('scrollDown', handleScrollDown);
-    window.addEventListener('sideClick', handleClick);
+    window.addEventListener('sideClick', handleSideClickEvent); // We bridge this to our custom logic
     window.addEventListener('longPressStart', handleLongPressStart);
     window.addEventListener('longPressEnd', handleLongPressEnd);
 
-    // --- 2. HARDWARE EVENT HANDLERS ---
+    // --- 2. DEBOUNCE LOGIC FOR DOUBLE CLICK ---
+    let lastClickTime = 0;
+    const DOUBLE_CLICK_THRESHOLD = 300; // ms
+    let clickTimer = null;
+
+    function handleSideClickEvent() {
+        const now = Date.now();
+        // If the gap between this click and the last is small, it's a double click
+        if (now - lastClickTime < DOUBLE_CLICK_THRESHOLD) {
+            clearTimeout(clickTimer); // Cancel the pending single click
+            handleDoubleClick();
+            lastClickTime = 0; // Reset
+        } else {
+            // Otherwise, it's a potential single click
+            lastClickTime = now;
+            clickTimer = setTimeout(() => {
+                handleSingleClick();
+            }, DOUBLE_CLICK_THRESHOLD);
+        }
+    }
+
+    // --- 3. HARDWARE ACTIONS ---
+    function handleSingleClick() {
+        document.getElementById('status').innerText = "Single Click!";
+        document.getElementById('app').style.borderColor = "blue";
+    }
+
+    function handleDoubleClick() {
+        document.getElementById('status').innerText = "Double Click!";
+        document.getElementById('app').style.borderColor = "red";
+    }
+
     function handleScrollUp() {
         document.getElementById('status').innerText = "Scroll: UP";
-        document.getElementById('app').style.borderColor = "green"; // Visual feedback
+        document.getElementById('app').style.borderColor = "green";
     }
 
     function handleScrollDown() {
         document.getElementById('status').innerText = "Scroll: DOWN";
-        document.getElementById('app').style.borderColor = "blue";
-    }
-
-    function handleClick() {
-        document.getElementById('status').innerText = "Side Button: Click";
-        document.getElementById('app').style.borderColor = "red";
+        document.getElementById('app').style.borderColor = "yellow";
     }
 
     function handleLongPressStart() {
-        document.getElementById('status').innerText = "Side Button: Holding...";
+        document.getElementById('status').innerText = "Holding...";
     }
 
     function handleLongPressEnd() {
-        document.getElementById('status').innerText = "Side Button: Released";
-        document.getElementById('app').style.borderColor = "#FE5000"; // Back to default
+        document.getElementById('status').innerText = "Released";
+        document.getElementById('app').style.borderColor = "#FE5000";
     }
 
-    // --- 3. AUDIO BRIDGE ---
+    // --- 4. AUDIO BRIDGE ---
     function speakTest() {
-        document.getElementById('status').innerText = "Speaking...";
         if(window.PluginMessageHandler) {
             PluginMessageHandler.postMessage(JSON.stringify({
-                message: "Hello! The audio bridge is working.",
+                message: "Bridge active.",
                 useLLM: true,
                 wantsR1Response: true 
             }));
-        } else {
-            document.getElementById('status').innerText = "Bridge not found";
         }
     }
-
-    // Handle incoming SDK responses
-    window.onPluginMessage = function(data) {
-        console.log("R1 Message:", data);
-    };
 </script>
 </body>
 </html>
