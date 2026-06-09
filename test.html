@@ -1,0 +1,134 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=240, height=292, initial-scale=1.0">
+    <style>
+        /* Height increased to 292px */
+        body, html { 
+            width: 240px; height: 292px; 
+            margin: 0; padding: 0; 
+            background: #000; color: #fff; font-family: sans-serif; 
+            overflow: hidden; box-sizing: border-box; 
+        }
+        #app { 
+            width: 240px; height: 292px; 
+            border: 5px solid #FE5000; 
+            box-sizing: border-box; 
+            display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; 
+        }
+        #status { font-size: 12px; margin-bottom: 10px; text-align: center; color: #aaa; }
+        button { width: 140px; height: 40px; margin: 5px; cursor: pointer; z-index: 10; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h3 id="status">System Ready</h3>
+        <button id="voiceBtn" onclick="safeSpeak()">Say Hello</button>
+    </div>
+
+<script>
+    // --- 1. PERSISTENCE LOGIC ---
+    async function saveState() {
+        const state = {
+            borderColor: document.getElementById('app').style.borderColor,
+            statusText: document.getElementById('status').innerText
+        };
+        if (window.creationStorage) {
+            await window.creationStorage.plain.setItem('app_settings', btoa(JSON.stringify(state)));
+        }
+    }
+
+    async function loadState() {
+        if (window.creationStorage) {
+            try {
+                const stored = await window.creationStorage.plain.getItem('app_settings');
+                if (stored) {
+                    const state = JSON.parse(atob(stored));
+                    document.getElementById('app').style.borderColor = state.borderColor;
+                    document.getElementById('status').innerText = state.statusText;
+                }
+            } catch (e) { console.log("No saved state found."); }
+        }
+    }
+
+    // Run on startup
+    window.addEventListener('load', loadState);
+
+    // --- 2. SDK EVENT LISTENERS ---
+    window.addEventListener('scrollUp', () => runSafe(handleScrollUp));
+    window.addEventListener('scrollDown', () => runSafe(handleScrollDown));
+    window.addEventListener('sideClick', () => runSafe(handleSideClickEvent));
+    window.addEventListener('longPressStart', () => runSafe(handleLongPressStart));
+    window.addEventListener('longPressEnd', () => runSafe(handleLongPressEnd));
+
+    function runSafe(fn, ...args) {
+        try { fn(...args); saveState(); } catch (e) { console.error(e); }
+    }
+
+    // --- 3. HARDWARE LOGIC ---
+    let lastClickTime = 0;
+    const DOUBLE_CLICK_THRESHOLD = 300;
+    let clickTimer = null;
+
+    function handleSideClickEvent() {
+        const now = Date.now();
+        if (now - lastClickTime < DOUBLE_CLICK_THRESHOLD) {
+            clearTimeout(clickTimer);
+            handleDoubleClick();
+            lastClickTime = 0;
+        } else {
+            lastClickTime = now;
+            clickTimer = setTimeout(() => handleSingleClick(), DOUBLE_CLICK_THRESHOLD);
+        }
+        window.focus(); 
+    }
+
+    function handleSingleClick() {
+        document.getElementById('status').innerText = "Single Click!";
+        document.getElementById('app').style.borderColor = "blue";
+        saveState();
+    }
+
+    function handleDoubleClick() {
+        document.getElementById('status').innerText = "Double Click!";
+        document.getElementById('app').style.borderColor = "red";
+        saveState();
+    }
+
+    function handleScrollUp() {
+        document.getElementById('status').innerText = "Scroll: DOWN"; 
+        document.getElementById('app').style.borderColor = "yellow";
+        saveState();
+    }
+
+    function handleScrollDown() {
+        document.getElementById('status').innerText = "Scroll: UP";
+        document.getElementById('app').style.borderColor = "green";
+        saveState();
+    }
+
+    function handleLongPressStart() {
+        document.getElementById('status').innerText = "Holding...";
+    }
+
+    function handleLongPressEnd() {
+        document.getElementById('status').innerText = "Released";
+        document.getElementById('app').style.borderColor = "#FE5000";
+        saveState();
+    }
+
+    function safeSpeak() {
+        document.getElementById('status').innerText = "Talking...";
+        if(window.PluginMessageHandler) {
+            PluginMessageHandler.postMessage(JSON.stringify({
+                message: "Bridge is active.",
+                useLLM: true,
+                wantsR1Response: true 
+            }));
+        }
+        setTimeout(() => window.focus(), 100);
+    }
+</script>
