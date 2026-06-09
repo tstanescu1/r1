@@ -6,46 +6,49 @@
     <style>
         body, html { width: 240px; height: 282px; margin: 0; padding: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; box-sizing: border-box; }
         #app { width: 240px; height: 282px; border: 5px solid #FE5000; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #status { font-size: 14px; margin-bottom: 10px; text-align: center; }
-        button { width: 120px; height: 40px; margin: 10px; cursor: pointer; z-index: 10; }
+        #status { font-size: 12px; margin-bottom: 10px; text-align: center; color: #aaa; }
+        button { width: 140px; height: 40px; margin: 5px; cursor: pointer; z-index: 10; font-size: 14px; }
     </style>
 </head>
 <body>
     <div id="app">
-        <h3 id="status">Ready</h3>
-        <button id="voiceBtn" onclick="speakTest()">Say Hello</button>
+        <h3 id="status">System Ready</h3>
+        <button id="voiceBtn" onclick="safeSpeak()">Say Hello</button>
     </div>
 
 <script>
-    // --- 1. SDK EVENT LISTENERS ---
-    window.addEventListener('scrollUp', handleScrollUp);
-    window.addEventListener('scrollDown', handleScrollDown);
-    window.addEventListener('sideClick', handleSideClickEvent); // We bridge this to our custom logic
-    window.addEventListener('longPressStart', handleLongPressStart);
-    window.addEventListener('longPressEnd', handleLongPressEnd);
+    // --- 1. ERROR-PROOF WRAPPERS ---
+    // If one handler crashes, the whole script stops. Try-Catch prevents this.
+    function runSafe(fn, ...args) {
+        try { fn(...args); } catch (e) { console.error("Event Handler Error:", e); }
+    }
 
-    // --- 2. DEBOUNCE LOGIC FOR DOUBLE CLICK ---
+    // --- 2. SDK EVENT LISTENERS ---
+    window.addEventListener('scrollUp', () => runSafe(handleScrollUp));
+    window.addEventListener('scrollDown', () => runSafe(handleScrollDown));
+    window.addEventListener('sideClick', () => runSafe(handleSideClickEvent));
+    window.addEventListener('longPressStart', () => runSafe(handleLongPressStart));
+    window.addEventListener('longPressEnd', () => runSafe(handleLongPressEnd));
+
+    // --- 3. HARDWARE LOGIC ---
     let lastClickTime = 0;
-    const DOUBLE_CLICK_THRESHOLD = 300; // ms
+    const DOUBLE_CLICK_THRESHOLD = 300;
     let clickTimer = null;
 
     function handleSideClickEvent() {
         const now = Date.now();
-        // If the gap between this click and the last is small, it's a double click
         if (now - lastClickTime < DOUBLE_CLICK_THRESHOLD) {
-            clearTimeout(clickTimer); // Cancel the pending single click
+            clearTimeout(clickTimer);
             handleDoubleClick();
-            lastClickTime = 0; // Reset
+            lastClickTime = 0;
         } else {
-            // Otherwise, it's a potential single click
             lastClickTime = now;
-            clickTimer = setTimeout(() => {
-                handleSingleClick();
-            }, DOUBLE_CLICK_THRESHOLD);
+            clickTimer = setTimeout(() => handleSingleClick(), DOUBLE_CLICK_THRESHOLD);
         }
+        // Force focus back to window after interaction
+        window.focus(); 
     }
 
-    // --- 3. HARDWARE ACTIONS ---
     function handleSingleClick() {
         document.getElementById('status').innerText = "Single Click!";
         document.getElementById('app').style.borderColor = "blue";
@@ -57,13 +60,13 @@
     }
 
     function handleScrollUp() {
-        document.getElementById('status').innerText = "Scroll: UP";
-        document.getElementById('app').style.borderColor = "green";
+        document.getElementById('status').innerText = "Scroll: DOWN"; // Inverted to match your preference
+        document.getElementById('app').style.borderColor = "yellow";
     }
 
     function handleScrollDown() {
-        document.getElementById('status').innerText = "Scroll: DOWN";
-        document.getElementById('app').style.borderColor = "yellow";
+        document.getElementById('status').innerText = "Scroll: UP";
+        document.getElementById('app').style.borderColor = "green";
     }
 
     function handleLongPressStart() {
@@ -75,15 +78,22 @@
         document.getElementById('app').style.borderColor = "#FE5000";
     }
 
-    // --- 4. AUDIO BRIDGE ---
-    function speakTest() {
+    // --- 4. AUDIO BRIDGE WITH FOCUS RECOVERY ---
+    function safeSpeak() {
+        document.getElementById('status').innerText = "Talking...";
         if(window.PluginMessageHandler) {
-            PluginMessageHandler.postMessage(JSON.stringify({
-                message: "Bridge active.",
-                useLLM: true,
-                wantsR1Response: true 
-            }));
+            try {
+                PluginMessageHandler.postMessage(JSON.stringify({
+                    message: "Bridge is active.",
+                    useLLM: true,
+                    wantsR1Response: true 
+                }));
+            } catch(e) {
+                document.getElementById('status').innerText = "Bridge Error";
+            }
         }
+        // IMPORTANT: Force focus back so the hardware listeners don't "sleep"
+        setTimeout(() => window.focus(), 100);
     }
 </script>
 </body>
