@@ -1,14 +1,49 @@
 <!DOCTYPE html>
 <html>
-<body style="width: 240px; height: 282px; display: flex; align-items: center; justify-content: center; font-family: sans-serif;">
-    <h1>Hello, World!</h1>
-    <script>
-        // Example: Sending a message to the R1 system
-        function notifyRabbit(msg) {
-            if (window.PluginMessageHandler) {
-                PluginMessageHandler.postMessage(msg);
-            }
+<head>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            width: 240px;
+            height: 282px;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 10px solid #ff4500; /* Default Orange Border */
+            box-sizing: border-box;
+            color: white;
+            font-family: sans-serif;
+            text-align: center;
         }
+    </style>
+</head>
+<body>
+    <div id="content">
+        <h2>R1 Tester</h2>
+        <p id="status">Ready</p>
+    </div>
+
+    <script>
+        const border = document.body;
+        const status = document.getElementById('status');
+
+        // Listener for the Side Button (Power/PTT)
+        // Rabbit's bridge often sends these as key events or specific messages
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Power' || e.code === 'Power') {
+                border.style.borderColor = '#00ff00'; // Green on press
+                status.innerText = "Button Pressed!";
+            }
+        });
+
+        // Listener for the Scroll Wheel
+        // Often mapped to wheel events or specific custom input events
+        window.addEventListener('wheel', (e) => {
+            border.style.borderColor = '#0000ff'; // Blue on scroll
+            status.innerText = "Scrolling: " + e.deltaY;
+        });
     </script>
 </body>
 </html>
