@@ -5,25 +5,17 @@
     <meta name="viewport" content="width=240, height=282, initial-scale=1.0">
     <style>
         body, html { 
-            width: 240px; height: 282px; 
-            margin: 0; padding: 0; 
-            background: #000; color: #fff; 
-            overflow: hidden; font-family: sans-serif;
-            box-sizing: border-box;
+            width: 240px; height: 282px; margin: 0; padding: 0; 
+            background: #000; color: #fff; font-family: sans-serif;
+            overflow: hidden; box-sizing: border-box;
         }
         #app { 
-            width: 240px; height: 282px; 
-            border: 5px solid #FE5000; 
-            box-sizing: border-box; 
-            display: flex; flex-direction: column; 
+            width: 240px; height: 282px; border: 5px solid #FE5000; 
+            box-sizing: border-box; display: flex; flex-direction: column; 
             align-items: center; justify-content: center;
         }
-        button { 
-            width: 120px; height: 40px; 
-            margin: 10px; cursor: pointer; 
-            z-index: 10; 
-        }
-        #status { font-size: 14px; margin-bottom: 10px; }
+        #status { font-size: 14px; margin-bottom: 10px; text-align: center; }
+        button { width: 120px; height: 40px; margin: 10px; cursor: pointer; z-index: 10; }
     </style>
 </head>
 <body>
@@ -33,56 +25,39 @@
     </div>
 
 <script>
-    // --- 1. HARDWARE BUTTON LOGIC ---
-    let clickCount = 0;
-    let pressTimer = null;
-    let startTime = 0;
+    // --- 1. SDK EVENT LISTENERS (From your Implementation Plan) ---
+    window.addEventListener('scrollUp', handleScrollUp);
+    window.addEventListener('scrollDown', handleScrollDown);
+    window.addEventListener('sideClick', handleClick);
+    window.addEventListener('longPressStart', handleLongPressStart);
+    window.addEventListener('longPressEnd', handleLongPressEnd);
 
-    // Use window-level listeners to catch physical interaction
-    window.addEventListener('mousedown', (e) => {
-        if (e.target.tagName === 'BUTTON') return; // Ignore on-screen UI taps
-        startTime = Date.now();
-        pressTimer = setTimeout(() => handleLongPress(), 800);
-    });
+    // --- 2. HARDWARE EVENT HANDLERS ---
+    function handleScrollUp() {
+        document.getElementById('status').innerText = "Scroll: UP";
+        document.getElementById('app').style.borderColor = "green"; // Visual feedback
+    }
 
-    window.addEventListener('mouseup', (e) => {
-        if (e.target.tagName === 'BUTTON') return; // Ignore on-screen UI taps
-        clearTimeout(pressTimer);
-        let duration = Date.now() - startTime;
-
-        if (duration < 500) { 
-            clickCount++;
-            setTimeout(() => {
-                if (clickCount === 1) handleSingleClick();
-                else if (clickCount === 2) handleDoubleClick();
-                clickCount = 0;
-            }, 300);
-        }
-    });
-
-    // --- 2. HARDWARE ACTIONS ---
-    function handleSingleClick() {
-        document.getElementById('status').innerText = "Single Click!";
+    function handleScrollDown() {
+        document.getElementById('status').innerText = "Scroll: DOWN";
         document.getElementById('app').style.borderColor = "blue";
     }
 
-    function handleDoubleClick() {
-        document.getElementById('status').innerText = "Double Click!";
+    function handleClick() {
+        document.getElementById('status').innerText = "Side Button: Click";
         document.getElementById('app').style.borderColor = "red";
     }
 
-    function handleLongPress() {
-        document.getElementById('status').innerText = "Long Press!";
-        document.getElementById('app').style.borderColor = "green";
+    function handleLongPressStart() {
+        document.getElementById('status').innerText = "Side Button: Holding...";
     }
 
-    // --- 3. SCROLL WHEEL (Native Browser Listener) ---
-    window.addEventListener('wheel', (e) => {
-        document.getElementById('status').innerText = "Scrolling: " + (e.deltaY > 0 ? "Down" : "Up");
-        document.getElementById('app').style.borderColor = "#FFD700"; // Gold on scroll
-    }, { passive: false });
+    function handleLongPressEnd() {
+        document.getElementById('status').innerText = "Side Button: Released";
+        document.getElementById('app').style.borderColor = "#FE5000"; // Back to default
+    }
 
-    // --- 4. R1 SDK BRIDGE ---
+    // --- 3. AUDIO BRIDGE ---
     function speakTest() {
         document.getElementById('status').innerText = "Speaking...";
         if(window.PluginMessageHandler) {
@@ -96,6 +71,7 @@
         }
     }
 
+    // Handle incoming SDK responses
     window.onPluginMessage = function(data) {
         console.log("R1 Message:", data);
     };
